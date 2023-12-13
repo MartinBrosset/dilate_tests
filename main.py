@@ -24,7 +24,7 @@ sigma = 0.01
 gamma = 0.01
 
 # Load synthetic dataset
-DATA_PATH = "../data/"
+DATA_PATH = "./data/"
 
 ecg_train = np.array(pd.read_table(DATA_PATH + "ECG5000/ECG5000_TRAIN.tsv"))[:, :, np.newaxis]
 ecg_test = np.array(pd.read_table(DATA_PATH + "ECG5000/ECG5000_TEST.tsv"))[:, :, np.newaxis]
