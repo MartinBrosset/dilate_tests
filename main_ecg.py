@@ -145,4 +145,5 @@ for ind in range(1,51):
         plt.legend()
         k = k+1
 
-    plt.show()
+    plt.savefig('plot_ecg.png')  # Save figure
+    plt.close()
