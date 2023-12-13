@@ -16,10 +16,10 @@ print(device)
 random.seed(0)
 
 # parameters
-batch_size = 100
-N = 500
-N_input = 20
-N_output = 20  
+batch_size = 30
+N = 300
+N_input = 84
+N_output = 56 
 sigma = 0.01
 gamma = 0.01
 
