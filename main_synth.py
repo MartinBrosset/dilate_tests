@@ -186,7 +186,7 @@ for ind in range(1,51):
         preds = pred.detach().cpu().numpy()[ind,:,:]
 
         plt.subplot(1,3,k)
-        plt.plot(range(0,N_input) ,input,label='input',linewidth=3)
+        plt.plot(range(0, len(input)), input.flatten(), label='input', linewidth=3)
         plt.plot(range(N_input-1,N_input+N_output), np.concatenate([ input[N_input-1:N_input], target ]) ,label='target',linewidth=3)   
         plt.plot(range(N_input-1,N_input+N_output),  np.concatenate([ input[N_input-1:N_input], preds ])  ,label='prediction',linewidth=3)       
         plt.xticks(range(0,40,2))
