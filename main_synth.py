@@ -17,7 +17,7 @@ print(device)
 random.seed(0)
 
 # parameters
-batch_size = 20
+batch_size = 40
 N = 500
 N_input = 84
 N_output = 56  
@@ -51,8 +51,9 @@ ecg_test_flat = scaler.transform(ecg_test_flat)
 ecg_train = ecg_train_flat.reshape(ecg_train.shape[0], ecg_train.shape[1], 1)
 ecg_test = ecg_test_flat.reshape(ecg_test.shape[0], ecg_test.shape[1], 1)
 
-
-# Tronquer ecg_test pour qu'il soit un multiple de batch_size
+# Tronquer pour s'assurer que la taille est un multiple de batch_size
+num_train_batches = ecg_train.shape[0] // batch_size
+ecg_train = ecg_train[:num_train_batches * batch_size]
 num_test_batches = ecg_test.shape[0] // batch_size
 ecg_test = ecg_test[:num_test_batches * batch_size]
 
