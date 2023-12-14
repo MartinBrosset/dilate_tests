@@ -66,7 +66,7 @@ def train_model(net,loss_type, learning_rate, epochs=1000, gamma = 0.001,
     
     for epoch in range(epochs): 
         for i, data in enumerate(trainloader, 0):
-            inputs, target, _ = data
+            inputs, target = data
             inputs = torch.tensor(inputs, dtype=torch.float32).to(device)
             target = torch.tensor(target, dtype=torch.float32).to(device)
             batch_size, N_output = target.shape[0:2]                     
@@ -101,7 +101,7 @@ def eval_model(net,loader, gamma,verbose=1):
     for i, data in enumerate(loader, 0):
         loss_mse, loss_dtw, loss_tdi = torch.tensor(0),torch.tensor(0),torch.tensor(0)
         # get the inputs
-        inputs, target, breakpoints = data
+        inputs, target = data
         inputs = torch.tensor(inputs, dtype=torch.float32).to(device)
         target = torch.tensor(target, dtype=torch.float32).to(device)
         batch_size, N_output = target.shape[0:2]
@@ -146,7 +146,7 @@ train_model(net_gru_mse,loss_type='mse',learning_rate=0.001, epochs=100, gamma=g
 
 # Visualize results
 gen_test = iter(testloader)
-test_inputs, test_targets, breaks = next(gen_test)
+test_inputs, test_targets = next(gen_test)
 
 test_inputs  = torch.tensor(test_inputs, dtype=torch.float32).to(device)
 test_targets = torch.tensor(test_targets, dtype=torch.float32).to(device)
