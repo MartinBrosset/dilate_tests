@@ -131,15 +131,15 @@ def eval_model(net,loader, gamma,verbose=1):
 encoder = EncoderRNN(input_size=1, hidden_size=128, num_grulstm_layers=1, batch_size=batch_size).to(device)
 decoder = DecoderRNN(input_size=1, hidden_size=128, num_grulstm_layers=1,fc_units=16, output_size=1).to(device)
 net_gru_dilate = Net_GRU(encoder,decoder, N_output, device).to(device)
-train_losses_dilate, train_losses_shape_dilate, train_losses_temp_dilate, test_mse_dilate, test_dtw_dilate, test_tdi_dilate = train_model(net_gru_dilate,loss_type='dilate',learning_rate=0.001, epochs=50, gamma=gamma, print_every=5, eval_every=5,verbose=1)
+train_losses_dilate, train_losses_shape_dilate, train_losses_temp_dilate, test_mse_dilate, test_dtw_dilate, test_tdi_dilate = train_model(net_gru_dilate,loss_type='dilate',learning_rate=0.001, epochs=500, gamma=gamma, print_every=5, eval_every=5,verbose=1)
 final_mse, final_dtw, final_tdi = eval_model(net_gru_dilate, testloader, gamma, verbose=0)
 
 
 encoder = EncoderRNN(input_size=1, hidden_size=128, num_grulstm_layers=1, batch_size=batch_size).to(device)
 decoder = DecoderRNN(input_size=1, hidden_size=128, num_grulstm_layers=1,fc_units=16, output_size=1).to(device)
 net_gru_mse = Net_GRU(encoder,decoder, N_output, device).to(device)
-train_losses_mse, train_losses_shape_mse, train_losses_temp_mse, test_mse_mse, test_dtw_mse, test_tdi_mse = train_model(net_gru_mse,loss_type='mse',learning_rate=0.001, epochs=50, gamma=gamma, print_every=5, eval_every=5,verbose=1)
-final_mse_2, final_dtw_2, final_tdi_2 = eval_model(net_gru_dilate, testloader, gamma, verbose=0)
+train_losses_mse, train_losses_shape_mse, train_losses_temp_mse, test_mse_mse, test_dtw_mse, test_tdi_mse = train_model(net_gru_mse,loss_type='mse',learning_rate=0.001, epochs=500, gamma=gamma, print_every=5, eval_every=5,verbose=1)
+final_mse_2, final_dtw_2, final_tdi_2 = eval_model(net_gru_mse, testloader, gamma, verbose=0)
 
 metrics_df = pd.DataFrame({
     'Loss' : ['DILATE', 'MSE'],
@@ -214,4 +214,36 @@ plt.legend()
 
 plt.tight_layout()
 plt.savefig(f'plots/ecg/plots_losses.png')  
+plt.close()
+
+
+# Plots des évolution des metrics au cours des epochs
+
+plt.figure(figsize=(12, 8))
+
+test_mse_mse, test_dtw_mse, test_tdi_mse
+
+# Premier subplot
+plt.subplot(3, 1, 1)
+plt.plot(range(1, len(test_mse_dilate) + 1), test_mse_dilate, label='loss = dilate', color='blue')
+plt.plot(range(1, len(test_mse_mse) + 1), test_mse_mse, label='loss = mse', color='red')
+plt.title('Evolution de la MSE de test en fonction de la loss choisie pour le modèle')
+plt.legend()
+
+# Deuxième subplot
+plt.subplot(3, 1, 2)
+plt.plot(range(1, len(test_dtw_dilate) + 1), test_dtw_dilate, label='loss = dilate', color='blue')
+plt.plot(range(1, len(test_dtw_mse) + 1), test_dtw_mse, label='loss = mse', color='red')
+plt.title('Evolution de la DTW de test en fonction de la loss choisie pour le modèle')
+plt.legend()
+
+# Troisième subplot
+plt.subplot(3, 1, 3)
+plt.plot(range(1, len(test_tdi_dilate) + 1), test_tdi_dilate, label='loss = dilate', color='blue')
+plt.plot(range(1, len(test_tdi_mse) + 1), test_tdi_mse, label='loss = mse', color='red')
+plt.title('Evolution de la TDI de test en fonction de la loss choisie pour le modèle')
+plt.legend()
+
+plt.tight_layout()
+plt.savefig(f'plots/ecg/plots_metrics.png')  
 plt.close()
