@@ -80,7 +80,9 @@ def train_model(net,loss_type, learning_rate, epochs=1000, gamma = 0.001,
                 print_every=50,eval_every=50, verbose=1, Lambda=1, alpha=0.5):
     
     optimizer = torch.optim.Adam(net.parameters(),lr=learning_rate)
-    #scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=70, gamma=0.4)
+    #scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.5)
+    #scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.9)
+
     criterion = torch.nn.MSELoss()
     
     for epoch in range(epochs): 
@@ -103,8 +105,9 @@ def train_model(net,loss_type, learning_rate, epochs=1000, gamma = 0.001,
                   
             optimizer.zero_grad()
             loss.backward()
-            optimizer.step()    
-            #scheduler.step()
+            optimizer.step() 
+
+        scheduler.step()
         
         if(verbose):
             if (epoch % print_every == 0):
@@ -157,7 +160,7 @@ def eval_model(net,loader, gamma,verbose=1):
 encoder = EncoderRNN(input_size=1, hidden_size=128, num_grulstm_layers=1, batch_size=batch_size).to(device)
 decoder = DecoderRNN(input_size=1, hidden_size=128, num_grulstm_layers=1,fc_units=16, output_size=1).to(device)
 net_gru_dilate = Net_GRU(encoder,decoder, N_output, device).to(device)
-train_model(net_gru_dilate,loss_type='dilate',learning_rate=0.0006, epochs=500, gamma=gamma, print_every=3, eval_every=3,verbose=1)
+train_model(net_gru_dilate,loss_type='dilate',learning_rate=0.005, epochs=500, gamma=gamma, print_every=3, eval_every=3,verbose=1)
 
 encoder = EncoderRNN(input_size=1, hidden_size=128, num_grulstm_layers=1, batch_size=batch_size).to(device)
 decoder = DecoderRNN(input_size=1, hidden_size=128, num_grulstm_layers=1,fc_units=16, output_size=1).to(device)
