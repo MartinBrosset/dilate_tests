@@ -15,6 +15,9 @@ import warnings; warnings.simplefilter('ignore')
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
+
+### SEED POUR LA REPRODUCTIBILITE 
+
 seed = 0
 random.seed(seed)
 np.random.seed(seed)
@@ -28,30 +31,21 @@ N_output = 56
 sigma = 0.01
 gamma = 0.01
 
-"""
-# Load synthetic dataset
-X_train_input,X_train_target,X_test_input,X_test_target,train_bkp,test_bkp = create_synthetic_dataset(N,N_input,N_output,sigma)
-dataset_train = SyntheticDataset(X_train_input,X_train_target, train_bkp)
-dataset_test  = SyntheticDataset(X_test_input,X_test_target, test_bkp)
-trainloader = DataLoader(dataset_train, batch_size=batch_size,shuffle=True, num_workers=1)
-testloader  = DataLoader(dataset_test, batch_size=batch_size,shuffle=False, num_workers=1)
-"""
+### IMPORTATION DU DATASET ECG
 
 DATA_PATH = "./data/"
 
 ecg_train = np.array(pd.read_table(DATA_PATH + "ECG5000/ECG5000_TRAIN.tsv"))[:, :, np.newaxis]
 ecg_test = np.array(pd.read_table(DATA_PATH + "ECG5000/ECG5000_TEST.tsv"))[:, :, np.newaxis]
 
-# Remodeler les données pour la normalisation
 ecg_train_flat = ecg_train.reshape(-1, ecg_train.shape[1])
 ecg_test_flat = ecg_test.reshape(-1, ecg_test.shape[1])
 
-# Normaliser les données
+# Normalisation
 scaler = StandardScaler()
 ecg_train_flat = scaler.fit_transform(ecg_train_flat)
 ecg_test_flat = scaler.transform(ecg_test_flat)
 
-# Remettre les données sous forme de séries temporelles
 ecg_train = ecg_train_flat.reshape(ecg_train.shape[0], ecg_train.shape[1], 1)
 ecg_test = ecg_test_flat.reshape(ecg_test.shape[0], ecg_test.shape[1], 1)
 
@@ -79,6 +73,9 @@ ecg_train_dataset = ECG5000Dataset(ecg_train)
 ecg_test_dataset = ECG5000Dataset(ecg_test)
 trainloader = DataLoader(ecg_train_dataset, batch_size=batch_size, shuffle=True)
 testloader = DataLoader(ecg_test_dataset, batch_size=batch_size, shuffle=False)
+
+
+### FONCTION ENTRAINEMENT ET EVALUATION
 
 def train_model(net,loss_type, learning_rate, epochs=1000, gamma = 0.001,
                 print_every=50,eval_every=50, verbose=1, Lambda=1, alpha=0.5):
@@ -162,17 +159,28 @@ def eval_model(net,loader, gamma,verbose=1):
     return(np.array(losses_mse).mean(), np.array(losses_dtw).mean(), np.array(losses_tdi).mean())
 
 
+### CREATION DU MODELE GRU (Seq2Seq) ET ENTRAINEMENT
+
 encoder = EncoderRNN(input_size=1, hidden_size=128, num_grulstm_layers=1, batch_size=batch_size).to(device)
 decoder = DecoderRNN(input_size=1, hidden_size=128, num_grulstm_layers=1,fc_units=16, output_size=1).to(device)
 net_gru_dilate = Net_GRU(encoder,decoder, N_output, device).to(device)
-train_model(net_gru_dilate,loss_type='dilate',learning_rate=0.005, epochs=300, gamma=gamma, print_every=5, eval_every=3,verbose=1)
+train_model(net_gru_dilate,loss_type='dilate',learning_rate=0.005, epochs=500, gamma=gamma, print_every=5, eval_every=5,verbose=1)
 final_mse, final_dtw, final_tdi = eval_model(net_gru_dilate, testloader, gamma, verbose=0)
 
 encoder = EncoderRNN(input_size=1, hidden_size=128, num_grulstm_layers=1, batch_size=batch_size).to(device)
 decoder = DecoderRNN(input_size=1, hidden_size=128, num_grulstm_layers=1,fc_units=16, output_size=1).to(device)
 net_gru_mse = Net_GRU(encoder,decoder, N_output, device).to(device)
-train_model(net_gru_mse,loss_type='mse',learning_rate=0.005, epochs=300, gamma=gamma, print_every=5, eval_every=5,verbose=1)
+train_model(net_gru_mse,loss_type='mse',learning_rate=0.005, epochs=500, gamma=gamma, print_every=5, eval_every=5,verbose=1)
 final_mse_2, final_dtw_2, final_tdi_2 = eval_model(net_gru_mse, testloader, gamma, verbose=0)
+
+
+# VISUALISATION DES RESULTATS
+
+# Create a directory 'plots' if it doesn't exist
+if not os.path.exists('plots/synth'):
+    os.makedirs('plots/synth')
+
+### TABLEAU RECAPITULATIF DES METRICS
 
 metrics_df = pd.DataFrame({
     'Loss' : ['DILATE', 'MSE'],
@@ -181,14 +189,10 @@ metrics_df = pd.DataFrame({
     'TDI': [final_tdi, final_tdi_2]
 })
 
-# Visualize results
-
-# Create a directory 'plots' if it doesn't exist
-if not os.path.exists('plots/synth'):
-    os.makedirs('plots/synth')
-
 metrics_df.to_csv('plots/synth/tab_metrics_synth.csv', index=False)
 
+
+### PREDICTION DE QUELQUES ECG
 
 gen_test = iter(testloader)
 test_inputs, test_targets = next(gen_test)
@@ -218,5 +222,5 @@ for ind in range(1,20):
         plt.legend()
         k = k+1
 
-        plt.savefig(f'plots/synth/plot_synth_{ind}.png')  # Save figure
-        plt.close()
+    plt.savefig(f'plots/synth/plot_synth_{ind}.png')  # Save figure
+    plt.close()
