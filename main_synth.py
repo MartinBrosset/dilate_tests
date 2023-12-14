@@ -15,7 +15,10 @@ import warnings; warnings.simplefilter('ignore')
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
-random.seed(0)
+seed = 0
+random.seed(seed)
+np.random.seed(seed)
+torch.manual_seed(seed)
 
 # parameters
 batch_size = 35
@@ -81,7 +84,7 @@ def train_model(net,loss_type, learning_rate, epochs=1000, gamma = 0.001,
                 print_every=50,eval_every=50, verbose=1, Lambda=1, alpha=0.5):
     
     optimizer = torch.optim.Adam(net.parameters(),lr=learning_rate)
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.6)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=25, gamma=0.7)
     #scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.9)
 
     criterion = torch.nn.MSELoss()
@@ -211,7 +214,7 @@ for ind in range(1,20):
         plt.plot(range(0, len(input)), input.flatten(), label='input', linewidth=3)
         plt.plot(range(len(input)-1,len(input)+len(preds)), np.concatenate([ input[len(input)-1:len(input)].flatten(), target.flatten() ]) ,label='target',linewidth=3)   
         plt.plot(range(len(input)-1,len(input)+len(preds)),  np.concatenate([ input[len(input)-1:len(input)].flatten(), preds.flatten() ])  ,label='prediction',linewidth=3)       
-        plt.xticks(range(0,140,5))
+        plt.xticks(range(0,140,10))
         plt.legend()
         k = k+1
 
