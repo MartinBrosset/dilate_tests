@@ -17,7 +17,7 @@ print(device)
 random.seed(0)
 
 # parameters
-batch_size = 40
+batch_size = 35
 N = 500
 N_input = 84
 N_output = 56  
@@ -155,7 +155,7 @@ def eval_model(net,loader, gamma,verbose=1):
 encoder = EncoderRNN(input_size=1, hidden_size=128, num_grulstm_layers=1, batch_size=batch_size).to(device)
 decoder = DecoderRNN(input_size=1, hidden_size=128, num_grulstm_layers=1,fc_units=16, output_size=1).to(device)
 net_gru_dilate = Net_GRU(encoder,decoder, N_output, device).to(device)
-train_model(net_gru_dilate,loss_type='dilate',learning_rate=0.15, epochs=200, gamma=gamma, print_every=2, eval_every=2,verbose=1)
+train_model(net_gru_dilate,loss_type='dilate',learning_rate=0.005, epochs=200, gamma=gamma, print_every=2, eval_every=2,verbose=1)
 
 encoder = EncoderRNN(input_size=1, hidden_size=128, num_grulstm_layers=1, batch_size=batch_size).to(device)
 decoder = DecoderRNN(input_size=1, hidden_size=128, num_grulstm_layers=1,fc_units=16, output_size=1).to(device)
