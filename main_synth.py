@@ -38,14 +38,19 @@ DATA_PATH = "./data/"
 ecg_train = np.array(pd.read_table(DATA_PATH + "ECG5000/ECG5000_TRAIN.tsv"))[:, :, np.newaxis]
 ecg_test = np.array(pd.read_table(DATA_PATH + "ECG5000/ECG5000_TEST.tsv"))[:, :, np.newaxis]
 
+# Remodeler les données pour la normalisation
+ecg_train_flat = ecg_train.reshape(-1, ecg_train.shape[1])
+ecg_test_flat = ecg_test.reshape(-1, ecg_test.shape[1])
+
 # Normaliser les données
 scaler = StandardScaler()
-ecg_train = scaler.fit_transform(ecg_train)
-ecg_test = scaler.transform(ecg_test)
+ecg_train_flat = scaler.fit_transform(ecg_train_flat)
+ecg_test_flat = scaler.transform(ecg_test_flat)
 
-# Tronquer ecg_train pour qu'il soit un multiple de batch_size
-num_train_batches = ecg_train.shape[0] // batch_size
-ecg_train = ecg_train[:num_train_batches * batch_size]
+# Remettre les données sous forme de séries temporelles
+ecg_train = ecg_train_flat.reshape(ecg_train.shape[0], ecg_train.shape[1], 1)
+ecg_test = ecg_test_flat.reshape(ecg_test.shape[0], ecg_test.shape[1], 1)
+
 
 # Tronquer ecg_test pour qu'il soit un multiple de batch_size
 num_test_batches = ecg_test.shape[0] // batch_size
