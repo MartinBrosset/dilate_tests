@@ -5,6 +5,8 @@ from models.seq2seq import EncoderRNN, DecoderRNN, Net_GRU
 from loss.dilate_loss import dilate_loss
 from torch.utils.data import DataLoader
 import random
+import pandas as pd
+import os
 from tslearn.metrics import dtw, dtw_path
 import matplotlib.pyplot as plt
 import warnings
@@ -35,6 +37,14 @@ def train_model(net,loss_type, learning_rate, epochs=1000, gamma = 0.001,
     
     optimizer = torch.optim.Adam(net.parameters(),lr=learning_rate)
     criterion = torch.nn.MSELoss()
+
+    train_losses = []
+    train_losses_shape = []
+    train_losses_temp = []
+
+    test_mse = []
+    test_dtw = []
+    test_tdi = []
     
     for epoch in range(epochs): 
         for i, data in enumerate(trainloader, 0):
@@ -49,10 +59,17 @@ def train_model(net,loss_type, learning_rate, epochs=1000, gamma = 0.001,
             
             if (loss_type=='mse'):
                 loss_mse = criterion(target,outputs)
-                loss = loss_mse                   
+                loss = loss_mse
+                loss_dilate, loss_shape, loss_temporal = dilate_loss(target,outputs,alpha, gamma, device) 
+                train_losses.append(loss_dilate.item())
+                train_losses_shape.append(loss_shape.item())
+                train_losses_temp.append(loss_temporal.item())                   
  
             if (loss_type=='dilate'):    
-                loss, loss_shape, loss_temporal = dilate_loss(target,outputs,alpha, gamma, device)             
+                loss, loss_shape, loss_temporal = dilate_loss(target,outputs,alpha, gamma, device) 
+                train_losses.append(loss.item())
+                train_losses_shape.append(loss_shape.item())
+                train_losses_temp.append(loss_temporal.item())           
                   
             optimizer.zero_grad()
             loss.backward()
@@ -61,7 +78,11 @@ def train_model(net,loss_type, learning_rate, epochs=1000, gamma = 0.001,
         if(verbose):
             if (epoch % print_every == 0):
                 print('epoch ', epoch, ' loss ',loss.item(),' loss shape ',loss_shape.item(),' loss temporal ',loss_temporal.item())
-                eval_model(net,testloader, gamma,verbose=1)
+                mse_, dtw_, tdi_ = eval_model(net,testloader, gamma,verbose=1)
+                test_mse.append(mse_)
+                test_dtw.append(dtw_)
+                test_tdi.append(tdi_)
+    return train_losses, train_losses_shape, train_losses_temp, test_mse, test_dtw, test_tdi
   
 
 def eval_model(net,loader, gamma,verbose=1):   
@@ -104,19 +125,37 @@ def eval_model(net,loader, gamma,verbose=1):
         losses_tdi.append( loss_tdi )
 
     print( ' Eval mse= ', np.array(losses_mse).mean() ,' dtw= ',np.array(losses_dtw).mean() ,' tdi= ', np.array(losses_tdi).mean()) 
-
+    
+    return(np.array(losses_mse).mean(), np.array(losses_dtw).mean(), np.array(losses_tdi).mean())
 
 encoder = EncoderRNN(input_size=1, hidden_size=128, num_grulstm_layers=1, batch_size=batch_size).to(device)
 decoder = DecoderRNN(input_size=1, hidden_size=128, num_grulstm_layers=1,fc_units=16, output_size=1).to(device)
 net_gru_dilate = Net_GRU(encoder,decoder, N_output, device).to(device)
-train_model(net_gru_dilate,loss_type='dilate',learning_rate=0.001, epochs=500, gamma=gamma, print_every=50, eval_every=50,verbose=1)
+train_losses_dilate, train_losses_shape_dilate, train_losses_temp_dilate, test_mse_dilate, test_dtw_dilate, test_tdi_dilate = train_model(net_gru_dilate,loss_type='dilate',learning_rate=0.001, epochs=50, gamma=gamma, print_every=5, eval_every=5,verbose=1)
+final_mse, final_dtw, final_tdi = eval_model(net_gru_dilate, testloader, gamma, verbose=0)
+
 
 encoder = EncoderRNN(input_size=1, hidden_size=128, num_grulstm_layers=1, batch_size=batch_size).to(device)
 decoder = DecoderRNN(input_size=1, hidden_size=128, num_grulstm_layers=1,fc_units=16, output_size=1).to(device)
 net_gru_mse = Net_GRU(encoder,decoder, N_output, device).to(device)
-train_model(net_gru_mse,loss_type='mse',learning_rate=0.001, epochs=500, gamma=gamma, print_every=50, eval_every=50,verbose=1)
+train_losses_mse, train_losses_shape_mse, train_losses_temp_mse, test_mse_mse, test_dtw_mse, test_tdi_mse = train_model(net_gru_mse,loss_type='mse',learning_rate=0.001, epochs=50, gamma=gamma, print_every=5, eval_every=5,verbose=1)
+final_mse_2, final_dtw_2, final_tdi_2 = eval_model(net_gru_dilate, testloader, gamma, verbose=0)
+
+metrics_df = pd.DataFrame({
+    'Loss' : ['DILATE', 'MSE'],
+    'MSE': [final_mse, final_mse_2],
+    'DTW': [final_dtw, final_dtw_2],
+    'TDI': [final_tdi, final_tdi_2]
+})
 
 # Visualize results
+
+# Create a directory 'plots' if it doesn't exist
+if not os.path.exists('plots/ecg'):
+    os.makedirs('plots/ecg')
+
+metrics_df.to_csv('plots/tab_metrics_ecg.csv', index=False)
+
 gen_test = iter(testloader)
 test_inputs, test_targets, breaks = next(gen_test)
 
@@ -145,5 +184,34 @@ for ind in range(1,51):
         plt.legend()
         k = k+1
 
-    plt.savefig('plot_ecg.png')  # Save figure
+    plt.savefig(f'plots/ecg/plot_ecg_{ind}.png')  
     plt.close()
+
+# Plots des évolution des loss au cours des epochs
+
+plt.figure(figsize=(12, 8))
+
+# Premier subplot
+plt.subplot(3, 1, 1)
+plt.plot(range(1, len(train_losses_dilate) + 1), train_losses_dilate, label='loss = dilate', color='blue')
+plt.plot(range(1, len(train_losses_dilate) + 1), train_losses_mse, label='loss = mse', color='red')
+plt.title('Evolution de L_dilate en fonction de la loss choisie pour le modèle')
+plt.legend()
+
+# Deuxième subplot
+plt.subplot(3, 1, 2)
+plt.plot(range(1, len(train_losses_shape_dilate) + 1), train_losses_shape_dilate, label='loss = dilate', color='blue')
+plt.plot(range(1, len(train_losses_shape_dilate) + 1), train_losses_shape_mse, label='loss = mse', color='red')
+plt.title('Evolution de L_shape en fonction de la loss choisie pour le modèle')
+plt.legend()
+
+# Troisième subplot
+plt.subplot(3, 1, 3)
+plt.plot(range(1, len(train_losses_temp_dilate) + 1), train_losses_temp_dilate, label='loss = dilate', color='blue')
+plt.plot(range(1, len(train_losses_temp_dilate) + 1), train_losses_temp_mse, label='loss = mse', color='red')
+plt.title('Evolution de L_temp en fonction de la loss choisie pour le modèle')
+plt.legend()
+
+plt.tight_layout()
+plt.savefig(f'plots/ecg/plots_losses.png')  
+plt.close()
