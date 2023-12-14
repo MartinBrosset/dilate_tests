@@ -16,7 +16,7 @@ print(device)
 random.seed(0)
 
 # parameters
-batch_size = 19
+batch_size = 35
 N = 500
 N_input = 84
 N_output = 56  
@@ -36,6 +36,14 @@ DATA_PATH = "./data/"
 
 ecg_train = np.array(pd.read_table(DATA_PATH + "ECG5000/ECG5000_TRAIN.tsv"))[:, :, np.newaxis]
 ecg_test = np.array(pd.read_table(DATA_PATH + "ECG5000/ECG5000_TEST.tsv"))[:, :, np.newaxis]
+
+# Tronquer ecg_train pour qu'il soit un multiple de batch_size
+num_train_batches = ecg_train.shape[0] // batch_size
+ecg_train = ecg_train[:num_train_batches * batch_size]
+
+# Tronquer ecg_test pour qu'il soit un multiple de batch_size
+num_test_batches = ecg_test.shape[0] // batch_size
+ecg_test = ecg_test[:num_test_batches * batch_size]
 
 print(ecg_train.shape, ecg_test.shape)
 
