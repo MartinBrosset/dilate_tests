@@ -16,7 +16,7 @@ print(device)
 random.seed(0)
 
 # parameters
-batch_size = 35
+batch_size = 49
 N = 500
 N_input = 84
 N_output = 56  
@@ -59,7 +59,7 @@ class ECG5000Dataset(Dataset):
     def __getitem__(self, index):
         return self.data[index, :-self.output_length], self.data[index, -self.output_length:]
     
-batch_size = 35
+batch_size = 49
 ecg_train_dataset = ECG5000Dataset(ecg_train)
 ecg_test_dataset = ECG5000Dataset(ecg_test)
 trainloader = DataLoader(ecg_train_dataset, batch_size=batch_size, shuffle=True)
@@ -145,7 +145,7 @@ def eval_model(net,loader, gamma,verbose=1):
 encoder = EncoderRNN(input_size=1, hidden_size=128, num_grulstm_layers=1, batch_size=batch_size).to(device)
 decoder = DecoderRNN(input_size=1, hidden_size=128, num_grulstm_layers=1,fc_units=16, output_size=1).to(device)
 net_gru_dilate = Net_GRU(encoder,decoder, N_output, device).to(device)
-train_model(net_gru_dilate,loss_type='dilate',learning_rate=0.0001, epochs=200, gamma=gamma, print_every=5, eval_every=5,verbose=1)
+train_model(net_gru_dilate,loss_type='dilate',learning_rate=0.001, epochs=200, gamma=gamma, print_every=5, eval_every=5,verbose=1)
 
 encoder = EncoderRNN(input_size=1, hidden_size=128, num_grulstm_layers=1, batch_size=batch_size).to(device)
 decoder = DecoderRNN(input_size=1, hidden_size=128, num_grulstm_layers=1,fc_units=16, output_size=1).to(device)
