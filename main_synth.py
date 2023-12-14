@@ -80,7 +80,7 @@ def train_model(net,loss_type, learning_rate, epochs=1000, gamma = 0.001,
                 print_every=50,eval_every=50, verbose=1, Lambda=1, alpha=0.5):
     
     optimizer = torch.optim.Adam(net.parameters(),lr=learning_rate)
-    #scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.5)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.5)
     #scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.9)
 
     criterion = torch.nn.MSELoss()
