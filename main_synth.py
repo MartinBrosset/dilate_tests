@@ -3,6 +3,7 @@ import torch
 from data.synthetic_dataset import create_synthetic_dataset, SyntheticDataset
 from models.seq2seq import EncoderRNN, DecoderRNN, Net_GRU
 from loss.dilate_loss import dilate_loss
+from sklearn.preprocessing import StandardScaler
 from torch.utils.data import DataLoader, Dataset
 import random
 import pandas as pd
@@ -16,7 +17,7 @@ print(device)
 random.seed(0)
 
 # parameters
-batch_size = 49
+batch_size = 20
 N = 500
 N_input = 84
 N_output = 56  
@@ -36,6 +37,11 @@ DATA_PATH = "./data/"
 
 ecg_train = np.array(pd.read_table(DATA_PATH + "ECG5000/ECG5000_TRAIN.tsv"))[:, :, np.newaxis]
 ecg_test = np.array(pd.read_table(DATA_PATH + "ECG5000/ECG5000_TEST.tsv"))[:, :, np.newaxis]
+
+# Normaliser les données
+scaler = StandardScaler()
+ecg_train = scaler.fit_transform(ecg_train)
+ecg_test = scaler.transform(ecg_test)
 
 # Tronquer ecg_train pour qu'il soit un multiple de batch_size
 num_train_batches = ecg_train.shape[0] // batch_size
@@ -59,12 +65,10 @@ class ECG5000Dataset(Dataset):
     def __getitem__(self, index):
         return self.data[index, :-self.output_length], self.data[index, -self.output_length:]
     
-batch_size = 49
 ecg_train_dataset = ECG5000Dataset(ecg_train)
 ecg_test_dataset = ECG5000Dataset(ecg_test)
 trainloader = DataLoader(ecg_train_dataset, batch_size=batch_size, shuffle=True)
 testloader = DataLoader(ecg_test_dataset, batch_size=batch_size, shuffle=False)
-
 
 def train_model(net,loss_type, learning_rate, epochs=1000, gamma = 0.001,
                 print_every=50,eval_every=50, verbose=1, Lambda=1, alpha=0.5):
