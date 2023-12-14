@@ -51,7 +51,7 @@ class ECG5000Dataset(Dataset):
     def __getitem__(self, index):
         return self.data[index, :-self.output_length], self.data[index, -self.output_length:]
     
-batch_size = 19
+batch_size = 50
 ecg_train_dataset = ECG5000Dataset(ecg_train)
 ecg_test_dataset = ECG5000Dataset(ecg_test)
 trainloader = DataLoader(ecg_train_dataset, batch_size=batch_size, shuffle=True)
