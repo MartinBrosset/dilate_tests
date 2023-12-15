@@ -2,7 +2,6 @@ import numpy as np
 import torch
 from numba import jit
 from torch.autograd import Function
-from . import path_soft_dtw
 
 @jit(nopython = True)
 def compute_softdtw(D, gamma):
@@ -16,10 +15,8 @@ def compute_softdtw(D, gamma):
       r0 = -R[i - 1, j - 1] / gamma
       r1 = -R[i - 1, j] / gamma
       r2 = -R[i, j - 1] / gamma
-      r = np.array([r0, r1, r2])
-      rmax = max(r)
-      r -= rmax
-      rsum = np.exp(np.sum(r))
+      rmax = max(max(r0, r1), r2)
+      rsum = np.exp(r0 - rmax) + np.exp(r1 - rmax) + np.exp(r2 - rmax)
       softmin = - gamma * (np.log(rsum) + rmax)
       R[i, j] = D[i - 1, j - 1] + softmin
   return R
