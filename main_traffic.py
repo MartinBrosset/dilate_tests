@@ -83,7 +83,7 @@ def train_model(net,loss_type, learning_rate, epochs=1000, gamma = 0.001,
     
     optimizer = torch.optim.Adam(net.parameters(),lr=learning_rate)
     ### learning rate adaptatif qui diminue au cours des epochs
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.8)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=15, gamma=0.7)
 
     criterion = torch.nn.MSELoss()
     
@@ -164,15 +164,15 @@ def eval_model(net,loader, gamma,verbose=1):
 ### CREATION DU MODELE GRU (Seq2Seq) ET ENTRAINEMENT
 
 net_gru_mse = Seq2Seq(input_size=1, hidden_size=128, num_layers=1, fc_units=16, output_size=1, target_length=N_output, device=device).to(device)
-train_model(net_gru_mse,loss_type='mse',learning_rate=0.0007, epochs=200, gamma=gamma, print_every=5)
+train_model(net_gru_mse,loss_type='mse',learning_rate=0.0005, epochs=200, gamma=gamma, print_every=5)
 final_mse_2, final_dtw_2, final_tdi_2 = eval_model(net_gru_mse, testloader, gamma)
 
 net_gru_dilate = Seq2Seq(input_size=1, hidden_size=128, num_layers=1, fc_units=16, output_size=1, target_length=N_output, device=device).to(device)
-train_model(net_gru_dilate,loss_type='dilate',learning_rate=0.0007, epochs=200, gamma=gamma, print_every=5)
+train_model(net_gru_dilate,loss_type='dilate',learning_rate=0.0005, epochs=200, gamma=gamma, print_every=5)
 final_mse, final_dtw, final_tdi = eval_model(net_gru_dilate, testloader, gamma)
 
 net_gru_soft_dtw = Seq2Seq(input_size=1, hidden_size=128, num_layers=1, fc_units=16, output_size=1, target_length=N_output, device=device).to(device)
-train_model(net_gru_soft_dtw,loss_type='dilate',learning_rate=0.0007, epochs=200, gamma=gamma, alpha =1, print_every=5)
+train_model(net_gru_soft_dtw,loss_type='dilate',learning_rate=0.0005, epochs=200, gamma=gamma, alpha =1, print_every=5)
 final_mse_3, final_dtw_3, final_tdi_3 = eval_model(net_gru_soft_dtw, testloader, gamma)
 
 
@@ -205,10 +205,9 @@ test_targets = torch.tensor(test_targets, dtype=torch.float32).to(device)
 criterion = torch.nn.MSELoss()
 
 nets = [net_gru_mse,net_gru_dilate,net_gru_soft_dtw]
-
-for ind in range(1,5):
+for ind in range(1, 5):
     plt.figure()
-    plt.rcParams['figure.figsize'] = (17.0,5.0)  
+    plt.rcParams['figure.figsize'] = (17.0, 5.0)  
     k = 1
     for net in nets:
         pred = net(test_inputs).to(device)
@@ -217,13 +216,16 @@ for ind in range(1,5):
         target = test_targets.detach().cpu().numpy()[ind,:,:]
         preds = pred.detach().cpu().numpy()[ind,:,:]
 
-        plt.subplot(1,3,k)
-        plt.plot(range(0, len(input)), input.flatten(), label='input', linewidth=3)
-        plt.plot(range(len(input)-1,len(input)+len(preds)), np.concatenate([ input[len(input)-1:len(input)].flatten(), target.flatten() ]) ,label='target',linewidth=3)   
-        plt.plot(range(len(input)-1,len(input)+len(preds)),  np.concatenate([ input[len(input)-1:len(input)].flatten(), preds.flatten() ])  ,label='prediction',linewidth=3)       
-        plt.xticks(range(0,140,10))
+        # Calculer l'indice de départ pour afficher les 65 derniers points
+        start_idx = max(0, len(input) - 65)
+
+        plt.subplot(1, 3, k)
+        plt.plot(range(start_idx, len(input)), input.flatten()[start_idx:], label='input', linewidth=3)
+        plt.plot(range(len(input)-1, len(input)+len(preds)), np.concatenate([input[len(input)-1:len(input)].flatten(), target.flatten()]), label='target', linewidth=3)   
+        plt.plot(range(len(input)-1, len(input)+len(preds)), np.concatenate([input[len(input)-1:len(input)].flatten(), preds.flatten()]), label='prediction', linewidth=3)       
+        plt.xticks(range(start_idx, len(input) + len(preds), 10))
         plt.legend()
-        k = k+1
+        k += 1
 
     plt.savefig(f'plots/traffic/plot_traffic_{ind}.png')  # Save figure
     plt.close()
