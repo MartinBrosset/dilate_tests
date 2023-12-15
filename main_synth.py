@@ -79,7 +79,7 @@ testloader = DataLoader(ecg_test_dataset, batch_size=batch_size, shuffle=False)
 ### FONCTION ENTRAINEMENT ET EVALUATION
 
 def train_model(net,loss_type, learning_rate, epochs=1000, gamma = 0.001,
-                print_every=50, alpha=0.5, early_stop = 30):
+                print_every=50, alpha=0.5):
     
     optimizer = torch.optim.Adam(net.parameters(),lr=learning_rate)
     ### learning rate adaptatif qui diminue au cours des epochs
@@ -92,7 +92,6 @@ def train_model(net,loss_type, learning_rate, epochs=1000, gamma = 0.001,
             inputs, target = data
             inputs = torch.tensor(inputs, dtype=torch.float32).to(device)
             target = torch.tensor(target, dtype=torch.float32).to(device)
-            batch_size, N_output = target.shape[0:2]                     
 
             # forward + backward + optimize
             outputs = net(inputs)
@@ -115,7 +114,6 @@ def train_model(net,loss_type, learning_rate, epochs=1000, gamma = 0.001,
         if (epoch % print_every == 0):
             print('epoch ', epoch, ' loss ',loss.item(),' loss shape ',loss_shape.item(),' loss temporal ',loss_temporal.item())
             m, d, t = eval_model(net,testloader, gamma,verbose=1)
-
 
   
 
