@@ -205,7 +205,7 @@ test_targets = torch.tensor(test_targets, dtype=torch.float32).to(device)
 criterion = torch.nn.MSELoss()
 
 nets = [net_gru_mse,net_gru_dilate,net_gru_soft_dtw]
-for ind in range(1, 5):
+for ind in range(1, 7):
     plt.figure()
     plt.rcParams['figure.figsize'] = (17.0, 5.0)  
     k = 1
@@ -220,11 +220,14 @@ for ind in range(1, 5):
         start_idx = max(0, len(input) - 65)
 
         plt.subplot(1, 3, k)
-        plt.plot(range(start_idx, len(input)), input.flatten()[start_idx:], label='input', linewidth=3)
-        plt.plot(range(len(input)-1, len(input)+len(preds)), np.concatenate([input[len(input)-1:len(input)].flatten(), target.flatten()]), label='target', linewidth=3)   
-        plt.plot(range(len(input)-1, len(input)+len(preds)), np.concatenate([input[len(input)-1:len(input)].flatten(), preds.flatten()]), label='prediction', linewidth=3)       
-        plt.xticks(range(start_idx, len(input) + len(preds), 10))
-        plt.legend()
+        end_idx = len(input) + len(preds) - 1  # Indice de fin pour les tracés
+        x_range = range(start_idx, end_idx)
+
+        # Ajuster les tracés pour démarrer à partir de start_idx
+        plt.plot(x_range[:len(input)-start_idx], input.flatten()[start_idx:], label='input', linewidth=3)
+        plt.plot(x_range, np.concatenate([input[len(input)-1:len(input)].flatten(), target.flatten()])[1-start_idx:], label='target', linewidth=3)
+        plt.plot(x_range, np.concatenate([input[len(input)-1:len(input)].flatten(), preds.flatten()])[1-start_idx:], label='prediction', linewidth=3)
+
         k += 1
 
     plt.savefig(f'plots/traffic/plot_traffic_{ind}.png')  # Save figure
