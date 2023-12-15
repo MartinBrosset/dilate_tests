@@ -26,7 +26,7 @@ torch.manual_seed(seed)
 
 # parameters
 batch_size = 6
-N = 500
+N = 70
 N_input = 168 ### une semaine
 N_output = 24 ### une journée   
 sigma = 0.01
@@ -60,7 +60,7 @@ print(traffic_train.shape, traffic_test.shape)
 
 class TrafficDataset(Dataset):
 
-    def __init__(self, data, output_length=56):
+    def __init__(self, data, output_length=24):
         self.data = torch.from_numpy(data).to(dtype=torch.float32)
         self.output_length = output_length
 
