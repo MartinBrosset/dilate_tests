@@ -212,21 +212,30 @@ for ind in range(1, 7):
     for net in nets:
         pred = net(test_inputs).to(device)
 
-        input = test_inputs.detach().cpu().numpy()[ind,:,:]
-        target = test_targets.detach().cpu().numpy()[ind,:,:]
-        preds = pred.detach().cpu().numpy()[ind,:,:]
+        input = test_inputs.detach().cpu().numpy()[ind,:,:].flatten()
+        target = test_targets.detach().cpu().numpy()[ind,:,:].flatten()
+        preds = pred.detach().cpu().numpy()[ind,:,:].flatten()
 
-        # Calculer l'indice de départ pour afficher les 65 derniers points
-        start_idx = max(0, len(input) - 65)
-
+        # Start index for the last 64 points of input
+        start_idx_input = len(input) - 64
+        
+        # Start index for the x-axis range for target and prediction
+        start_idx_target_pred = 64 - 24 + 1
+        
         plt.subplot(1, 3, k)
-        end_idx = len(input) + len(preds) - 1  # Indice de fin pour les tracés
-        x_range = range(start_idx, end_idx)
-
-        # Ajuster les tracés pour démarrer à partir de start_idx
-        plt.plot(x_range[:len(input)-start_idx], input.flatten()[start_idx:], label='input', linewidth=3)
-        plt.plot(x_range, np.concatenate([input[len(input)-1:len(input)].flatten(), target.flatten()])[1-start_idx:], label='target', linewidth=3)
-        plt.plot(x_range, np.concatenate([input[len(input)-1:len(input)].flatten(), preds.flatten()])[1-start_idx:], label='prediction', linewidth=3)
+        # Create a range from 1 to 64 for the x-axis
+        x_axis_range_input = range(1, 65)
+        x_axis_range_target_pred = range(start_idx_target_pred, 65)
+        
+        # Plot the last 64 points of input
+        plt.plot(x_axis_range_input, input[start_idx_input:], label='input', linewidth=3)
+        
+        # Plot the 24 points of target and prediction at the end of the x-axis range
+        plt.plot(x_axis_range_target_pred, target, label='target', linewidth=3, linestyle='dashed')
+        plt.plot(x_axis_range_target_pred, preds, label='prediction', linewidth=3, linestyle='dotted')
+        
+        plt.xticks(range(1,65,5))
+        plt.legend()
 
         k += 1
 
