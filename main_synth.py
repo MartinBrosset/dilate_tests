@@ -18,7 +18,7 @@ print(device)
 
 ### SEED POUR LA REPRODUCTIBILITE 
 
-seed = 0
+seed = 1
 random.seed(seed)
 np.random.seed(seed)
 torch.manual_seed(seed)
@@ -177,7 +177,7 @@ encoder = EncoderRNN(input_size=1, hidden_size=128, num_grulstm_layers=1, batch_
 decoder = DecoderRNN(input_size=1, hidden_size=128, num_grulstm_layers=1,fc_units=16, output_size=1).to(device)
 net_gru_soft_dtw = Net_GRU(encoder,decoder, N_output, device).to(device)
 train_model(net_gru_soft_dtw,loss_type='dilate',learning_rate=0.005, epochs=500, gamma=gamma, alpha =1, print_every=5, eval_every=5,verbose=1)
-final_mse_3, final_dtw_3, final_tdi_3 = eval_model(net_gru_mse, testloader, gamma, verbose=0)
+final_mse_3, final_dtw_3, final_tdi_3 = eval_model(net_gru_soft_dtw, testloader, gamma, verbose=0)
 
 
 # VISUALISATION DES RESULTATS
