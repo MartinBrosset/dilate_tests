@@ -173,6 +173,12 @@ net_gru_mse = Net_GRU(encoder,decoder, N_output, device).to(device)
 train_model(net_gru_mse,loss_type='mse',learning_rate=0.005, epochs=500, gamma=gamma, print_every=5, eval_every=5,verbose=1)
 final_mse_2, final_dtw_2, final_tdi_2 = eval_model(net_gru_mse, testloader, gamma, verbose=0)
 
+encoder = EncoderRNN(input_size=1, hidden_size=128, num_grulstm_layers=1, batch_size=batch_size).to(device)
+decoder = DecoderRNN(input_size=1, hidden_size=128, num_grulstm_layers=1,fc_units=16, output_size=1).to(device)
+net_gru_soft_dtw = Net_GRU(encoder,decoder, N_output, device).to(device)
+train_model(net_gru_soft_dtw,loss_type='dilate',learning_rate=0.005, epochs=500, gamma=gamma, alpha =1, print_every=5, eval_every=5,verbose=1)
+final_mse_3, final_dtw_3, final_tdi_3 = eval_model(net_gru_mse, testloader, gamma, verbose=0)
+
 
 # VISUALISATION DES RESULTATS
 
@@ -183,11 +189,12 @@ if not os.path.exists('plots/synth'):
 ### TABLEAU RECAPITULATIF DES METRICS
 
 metrics_df = pd.DataFrame({
-    'Loss' : ['DILATE', 'MSE'],
-    'MSE': [final_mse, final_mse_2],
-    'DTW': [final_dtw, final_dtw_2],
-    'TDI': [final_tdi, final_tdi_2]
+    'Loss' : ['DILATE', 'MSE', 'SOFT DTW'],
+    'MSE': [final_mse, final_mse_2, final_mse_3],
+    'DTW': [final_dtw, final_dtw_2, final_dtw_3],
+    'TDI': [final_tdi, final_tdi_2, final_tdi_3]
 })
+
 
 metrics_df.to_csv('plots/synth/tab_metrics_synth.csv', index=False)
 
@@ -201,7 +208,7 @@ test_inputs  = torch.tensor(test_inputs, dtype=torch.float32).to(device)
 test_targets = torch.tensor(test_targets, dtype=torch.float32).to(device)
 criterion = torch.nn.MSELoss()
 
-nets = [net_gru_mse,net_gru_dilate]
+nets = [net_gru_mse,net_gru_dilate,net_gru_soft_dtw]
 
 for ind in range(1,20):
     plt.figure()
