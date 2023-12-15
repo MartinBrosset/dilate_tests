@@ -1,11 +1,12 @@
 import numpy as np
 import torch
 from data.synthetic_dataset import create_synthetic_dataset, SyntheticDataset
-from models.seq2seq import EncoderRNN, DecoderRNN, Net_GRU
+from models.seq2seq import Seq2Seq
 from loss.dilate_loss import dilate_loss
 from sklearn.preprocessing import StandardScaler
 from torch.utils.data import DataLoader, Dataset
 import random
+from copy import deepcopy
 import os
 import pandas as pd
 from tslearn.metrics import dtw, dtw_path
@@ -24,40 +25,40 @@ np.random.seed(seed)
 torch.manual_seed(seed)
 
 # parameters
-batch_size = 35
+batch_size = 6
 N = 500
-N_input = 84
-N_output = 56  
+N_input = 168 ### une semaine
+N_output = 24 ### une journée   
 sigma = 0.01
 gamma = 0.01
 
-### IMPORTATION DU DATASET ECG
+### IMPORTATION DU DATASET traffic
 
 DATA_PATH = "./data/"
 
-ecg_train = np.array(pd.read_table(DATA_PATH + "ECG5000/ECG5000_TRAIN.tsv"))[:, :, np.newaxis]
-ecg_test = np.array(pd.read_table(DATA_PATH + "ECG5000/ECG5000_TEST.tsv"))[:, :, np.newaxis]
+traffic_train = np.array(pd.read_table(DATA_PATH + "Traffic/TRAFFIC_TRAIN.tsv"))[:, :, np.newaxis]
+traffic_test = np.array(pd.read_table(DATA_PATH + "Traffic/TRAFFIC_TEST.tsv"))[:, :, np.newaxis]
 
-ecg_train_flat = ecg_train.reshape(-1, ecg_train.shape[1])
-ecg_test_flat = ecg_test.reshape(-1, ecg_test.shape[1])
+traffic_train_flat = traffic_train.reshape(-1, traffic_train.shape[1])
+traffic_test_flat = traffic_test.reshape(-1, traffic_test.shape[1])
 
 # Normalisation
 scaler = StandardScaler()
-ecg_train_flat = scaler.fit_transform(ecg_train_flat)
-ecg_test_flat = scaler.transform(ecg_test_flat)
+traffic_train_flat = scaler.fit_transform(traffic_train_flat)
+traffic_test_flat = scaler.transform(traffic_test_flat)
 
-ecg_train = ecg_train_flat.reshape(ecg_train.shape[0], ecg_train.shape[1], 1)
-ecg_test = ecg_test_flat.reshape(ecg_test.shape[0], ecg_test.shape[1], 1)
+traffic_train = traffic_train_flat.reshape(traffic_train.shape[0], traffic_train.shape[1], 1)
+traffic_test = traffic_test_flat.reshape(traffic_test.shape[0], traffic_test.shape[1], 1)
 
 # Tronquer pour s'assurer que la taille est un multiple de batch_size
-num_train_batches = ecg_train.shape[0] // batch_size
-ecg_train = ecg_train[:num_train_batches * batch_size]
-num_test_batches = ecg_test.shape[0] // batch_size
-ecg_test = ecg_test[:num_test_batches * batch_size]
+num_train_batches = traffic_train.shape[0] // batch_size
+traffic_train = traffic_train[:num_train_batches * batch_size]
+num_test_batches = traffic_test.shape[0] // batch_size
+traffic_test = traffic_test[:num_test_batches * batch_size]
 
-print(ecg_train.shape, ecg_test.shape)
+print(traffic_train.shape, traffic_test.shape)
 
-class ECG5000Dataset(Dataset):
+class TrafficDataset(Dataset):
 
     def __init__(self, data, output_length=56):
         self.data = torch.from_numpy(data).to(dtype=torch.float32)
@@ -69,20 +70,20 @@ class ECG5000Dataset(Dataset):
     def __getitem__(self, index):
         return self.data[index, :-self.output_length], self.data[index, -self.output_length:]
     
-ecg_train_dataset = ECG5000Dataset(ecg_train)
-ecg_test_dataset = ECG5000Dataset(ecg_test)
-trainloader = DataLoader(ecg_train_dataset, batch_size=batch_size, shuffle=True)
-testloader = DataLoader(ecg_test_dataset, batch_size=batch_size, shuffle=False)
+traffic_train_dataset = TrafficDataset(traffic_train)
+traffic_test_dataset = TrafficDataset(traffic_test)
+trainloader = DataLoader(traffic_train_dataset, batch_size=batch_size, shuffle=True)
+testloader = DataLoader(traffic_test_dataset, batch_size=batch_size, shuffle=False)
 
 
 ### FONCTION ENTRAINEMENT ET EVALUATION
 
 def train_model(net,loss_type, learning_rate, epochs=1000, gamma = 0.001,
-                print_every=50,eval_every=50, verbose=1, Lambda=1, alpha=0.5):
+                print_every=50, alpha=0.8):
     
     optimizer = torch.optim.Adam(net.parameters(),lr=learning_rate)
+    ### learning rate adaptatif qui diminue au cours des epochs
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.8)
-    #scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.9)
 
     criterion = torch.nn.MSELoss()
     
@@ -91,7 +92,6 @@ def train_model(net,loss_type, learning_rate, epochs=1000, gamma = 0.001,
             inputs, target = data
             inputs = torch.tensor(inputs, dtype=torch.float32).to(device)
             target = torch.tensor(target, dtype=torch.float32).to(device)
-            batch_size, N_output = target.shape[0:2]                     
 
             # forward + backward + optimize
             outputs = net(inputs)
@@ -108,12 +108,13 @@ def train_model(net,loss_type, learning_rate, epochs=1000, gamma = 0.001,
             loss.backward()
             optimizer.step() 
 
+        ### on ajoute un pas au scheduler pour mettre le learning rate à jour
         scheduler.step()
         
-        if(verbose):
-            if (epoch % print_every == 0):
-                print('epoch ', epoch, ' loss ',loss.item(),' loss shape ',loss_shape.item(),' loss temporal ',loss_temporal.item())
-                m, d, t = eval_model(net,testloader, gamma,verbose=1)
+        if (epoch % print_every == 0):
+            print('epoch ', epoch, ' loss ',loss.item(),' loss shape ',loss_shape.item(),' loss temporal ',loss_temporal.item())
+            m, d, t = eval_model(net,testloader, gamma,verbose=1)
+
   
 
 def eval_model(net,loader, gamma,verbose=1):   
@@ -133,8 +134,9 @@ def eval_model(net,loader, gamma,verbose=1):
          
         # MSE    
         loss_mse = criterion(target,outputs)    
-        loss_dtw, loss_tdi = 0,0
+
         # DTW and TDI
+        loss_dtw, loss_tdi = 0,0
         for k in range(batch_size):         
             target_k_cpu = target[k,:,0:1].view(-1).detach().cpu().numpy()
             output_k_cpu = outputs[k,:,0:1].view(-1).detach().cpu().numpy()
@@ -161,30 +163,24 @@ def eval_model(net,loader, gamma,verbose=1):
 
 ### CREATION DU MODELE GRU (Seq2Seq) ET ENTRAINEMENT
 
-encoder = EncoderRNN(input_size=1, hidden_size=128, num_grulstm_layers=1, batch_size=batch_size).to(device)
-decoder = DecoderRNN(input_size=1, hidden_size=128, num_grulstm_layers=1,fc_units=16, output_size=1).to(device)
-net_gru_dilate = Net_GRU(encoder,decoder, N_output, device).to(device)
-train_model(net_gru_dilate,loss_type='dilate',learning_rate=0.005, epochs=500, gamma=gamma, print_every=5, eval_every=5,verbose=1)
-final_mse, final_dtw, final_tdi = eval_model(net_gru_dilate, testloader, gamma, verbose=0)
+net_gru_mse = Seq2Seq(input_size=1, hidden_size=128, num_layers=1, fc_units=16, output_size=1, target_length=N_output, device=device).to(device)
+train_model(net_gru_mse,loss_type='mse',learning_rate=0.005, epochs=100, gamma=gamma, print_every=5)
+final_mse_2, final_dtw_2, final_tdi_2 = eval_model(net_gru_mse, testloader, gamma)
 
-encoder = EncoderRNN(input_size=1, hidden_size=128, num_grulstm_layers=1, batch_size=batch_size).to(device)
-decoder = DecoderRNN(input_size=1, hidden_size=128, num_grulstm_layers=1,fc_units=16, output_size=1).to(device)
-net_gru_mse = Net_GRU(encoder,decoder, N_output, device).to(device)
-train_model(net_gru_mse,loss_type='mse',learning_rate=0.005, epochs=500, gamma=gamma, print_every=5, eval_every=5,verbose=1)
-final_mse_2, final_dtw_2, final_tdi_2 = eval_model(net_gru_mse, testloader, gamma, verbose=0)
+net_gru_dilate = Seq2Seq(input_size=1, hidden_size=128, num_layers=1, fc_units=16, output_size=1, target_length=N_output, device=device).to(device)
+train_model(net_gru_dilate,loss_type='dilate',learning_rate=0.005, epochs=200, gamma=gamma, print_every=5)
+final_mse, final_dtw, final_tdi = eval_model(net_gru_dilate, testloader, gamma)
 
-encoder = EncoderRNN(input_size=1, hidden_size=128, num_grulstm_layers=1, batch_size=batch_size).to(device)
-decoder = DecoderRNN(input_size=1, hidden_size=128, num_grulstm_layers=1,fc_units=16, output_size=1).to(device)
-net_gru_mse = Net_GRU(encoder,decoder, N_output, device).to(device)
-train_model(net_gru_mse,loss_type='dilate',learning_rate=0.005, epochs=500, gamma=gamma, alpha =1, print_every=5, eval_every=5,verbose=1)
-final_mse_3, final_dtw_3, final_tdi_3 = eval_model(net_gru_mse, testloader, gamma, verbose=0)
+net_gru_soft_dtw = Seq2Seq(input_size=1, hidden_size=128, num_layers=1, fc_units=16, output_size=1, target_length=N_output, device=device).to(device)
+train_model(net_gru_soft_dtw,loss_type='dilate',learning_rate=0.005, epochs=200, gamma=gamma, alpha =1, print_every=5)
+final_mse_3, final_dtw_3, final_tdi_3 = eval_model(net_gru_soft_dtw, testloader, gamma)
 
 
 # VISUALISATION DES RESULTATS
 
 # Create a directory 'plots' if it doesn't exist
-if not os.path.exists('plots/synth'):
-    os.makedirs('plots/synth')
+if not os.path.exists('plots/traffic'):
+    os.makedirs('plots/traffic')
 
 ### TABLEAU RECAPITULATIF DES METRICS
 
@@ -195,10 +191,11 @@ metrics_df = pd.DataFrame({
     'TDI': [final_tdi, final_tdi_2, final_tdi_3]
 })
 
-metrics_df.to_csv('plots/synth/tab_metrics_synth.csv', index=False)
+
+metrics_df.to_csv('plots/traffic/tab_metrics_traffic.csv', index=False)
 
 
-### PREDICTION DE QUELQUES ECG
+### PREDICTION DE QUELQUES traffic
 
 gen_test = iter(testloader)
 test_inputs, test_targets = next(gen_test)
@@ -207,7 +204,7 @@ test_inputs  = torch.tensor(test_inputs, dtype=torch.float32).to(device)
 test_targets = torch.tensor(test_targets, dtype=torch.float32).to(device)
 criterion = torch.nn.MSELoss()
 
-nets = [net_gru_mse,net_gru_dilate]
+nets = [net_gru_mse,net_gru_dilate,net_gru_soft_dtw]
 
 for ind in range(1,20):
     plt.figure()
@@ -228,5 +225,5 @@ for ind in range(1,20):
         plt.legend()
         k = k+1
 
-    plt.savefig(f'plots/synth/plot_synth_{ind}.png')  # Save figure
+    plt.savefig(f'plots/traffic/plot_traffic_{ind}.png')  # Save figure
     plt.close()
