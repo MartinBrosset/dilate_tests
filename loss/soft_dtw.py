@@ -13,10 +13,10 @@ def compute_softdtw(D, gamma):
   for j in range(1, M + 1):
     for i in range(1, N + 1):
       ### softmin
-      r0 = -R[i - 1, j - 1] 
-      r1 = -R[i - 1, j] 
-      r2 = -R[i, j - 1] 
-      r = np.array(r0, r1, r2)/gamma
+      r0 = -R[i - 1, j - 1] / gamma
+      r1 = -R[i - 1, j] / gamma
+      r2 = -R[i, j - 1] / gamma
+      r = [r0, r1, r2]
       rmax = max(r)
       r -= rmax
       rsum = np.exp(np.sum(r))
