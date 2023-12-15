@@ -5,6 +5,19 @@ from numba import jit
 
 
 @jit(nopython = True)
+def my_max(x, gamma):
+    # use the log-sum-exp trick
+    max_x = np.max(x)
+    exp_x = np.exp((x - max_x) / gamma)
+    Z = np.sum(exp_x)
+    return gamma * np.log(Z) + max_x, exp_x / Z
+
+@jit(nopython = True)
+def my_min(x,gamma) :
+    min_x, argmax_x = my_max(-x, gamma)
+    return - min_x, argmax_x
+
+@jit(nopython = True)
 def soft_min(x,gamma) :
     if gamma == 0:
          return np.min(x)
@@ -38,7 +51,7 @@ def dtw_grad(theta, gamma):
     for i in range(1, m + 1):
         for j in range(1, n + 1):
             # theta is indexed starting from 0.
-            v, Q[i, j] = soft_min(np.array([V[i, j - 1],
+            v, Q[i, j] = my_min(np.array([V[i, j - 1],
                                                 V[i - 1, j - 1],
                                                 V[i - 1, j]]) , gamma)                        
             V[i, j] = theta[i - 1, j - 1] + v
