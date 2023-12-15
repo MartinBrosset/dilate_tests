@@ -12,11 +12,16 @@ def compute_softdtw(D, gamma):
   R[0, 0] = 0
   for j in range(1, M + 1):
     for i in range(1, N + 1):
+      ### softmin
       r0 = -R[i - 1, j - 1] 
       r1 = -R[i - 1, j] 
       r2 = -R[i, j - 1] 
       r = [r0, r1, r2]
-      softmin, argmax = path_soft_dtw.soft_min(r, gamma)
+      r /= gamma 
+      rmax = max(r)
+      r -= rmax
+      rsum = np.exp(np.sum(r))
+      softmin = - gamma * (np.log(rsum) + rmax)
       R[i, j] = D[i - 1, j - 1] + softmin
   return R
 
