@@ -3,38 +3,19 @@ import torch
 from torch.autograd import Function
 from numba import jit
 
-
-@jit(nopython = True)
-def my_max(x, gamma):
-    # use the log-sum-exp trick
+@jit(nopython=True)
+def soft_min(x, gamma):
+    # log-sum-exp trick pour calcluer le min soft
     max_x = np.max(x)
-    exp_x = np.exp((x - max_x) / gamma)
+    exp_x = np.exp((x - max_x) / gamma) ### on enlève le max pour la stabilité numérique
     Z = np.sum(exp_x)
-    return gamma * np.log(Z) + max_x, exp_x / Z
-
-@jit(nopython = True)
-def my_min(x,gamma) :
-    min_x, argmax_x = my_max(-x, gamma)
-    return - min_x, argmax_x
-
-@jit(nopython = True)
-def soft_min(x,gamma) :
-    if gamma == 0:
-         return np.min(x)
-    z = - x / gamma
-    max_z = np.max(z) 
-    z = z - max_z ### on soustrait le max pour n'avoir que des petites valeurs (pour éviter le débordement numérique)
-    exp_z  = np.exp(z)
-    sum_exp_z  = np.sum(np.exp(z))
-    return gamma * (np.log(sum_exp_z) + max_z), exp_z / sum_exp_z
-
-@jit(nopython = True)
-def my_max_hessian_product(p, z, gamma):
-    return  ( p * z - p * np.sum(p * z) ) /gamma
+    result = - gamma * np.log(Z) - max_x
+    argmax_x = - exp_x / Z
+    return result, argmax_x
 
 @jit(nopython = True)
 def my_min_hessian_product(p, z, gamma):
-    return - my_max_hessian_product(p, z, gamma)
+    return - ( p * z - p * np.sum(p * z) ) /gamma
 
 
 @jit(nopython = True)
@@ -51,7 +32,7 @@ def dtw_grad(theta, gamma):
     for i in range(1, m + 1):
         for j in range(1, n + 1):
             # theta is indexed starting from 0.
-            v, Q[i, j] = my_min(np.array([V[i, j - 1],
+            v, Q[i, j] = soft_min(np.array([V[i, j - 1],
                                                 V[i - 1, j - 1],
                                                 V[i - 1, j]]) , gamma)                        
             V[i, j] = theta[i - 1, j - 1] + v
