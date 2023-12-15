@@ -20,7 +20,6 @@ class Seq2Seq(nn.Module):
 
     def forward(self, x):
         batch_size = x.size(0)
-        input_length = x.size(1)
 
         # Encoder
         encoder_hidden = torch.zeros(self.num_layers, batch_size, self.hidden_size, device=self.device)

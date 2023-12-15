@@ -17,10 +17,6 @@ def my_min(x,gamma) :
     return - min_x, argmax_x
 
 @jit(nopython = True)
-def my_max_hessian_product(p, z, gamma):
-    return  ( p * z - p * np.sum(p * z) ) /gamma
-
-@jit(nopython = True)
 def my_min_hessian_product(p, z, gamma):
     return - ( p * z - p * np.sum(p * z) ) /gamma
 
