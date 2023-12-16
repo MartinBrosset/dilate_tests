@@ -205,36 +205,33 @@ test_targets = torch.tensor(test_targets, dtype=torch.float32).to(device)
 criterion = torch.nn.MSELoss()
 
 nets = [net_gru_mse,net_gru_dilate,net_gru_soft_dtw]
-for ind in range(1, 7):
-    plt.figure()
+
+for ind in range(1, 8):
+
+    plt.figure(figsize=(12, 4))
     plt.rcParams['figure.figsize'] = (17.0, 5.0)  
     k = 1
     for net in nets:
         pred = net(test_inputs).to(device)
+        input = test_inputs.detach().cpu().numpy()[ind,:,:]
+        target = test_targets.detach().cpu().numpy()[ind,:,:]
+        preds = pred.detach().cpu().numpy()[ind,:,:]
 
-        input = test_inputs.detach().cpu().numpy()[ind,:,:].flatten()
-        target = test_targets.detach().cpu().numpy()[ind,:,:].flatten()
-        preds = pred.detach().cpu().numpy()[ind,:,:].flatten()
+        plt.subplot(1,3,k)
 
-        # Start index for the last 64 points of input
-        start_idx_input = len(input) - 64
-        
-        # Start index for the x-axis range for target and prediction
-        start_idx_target_pred = 64 - 24 + 1
-        
-        plt.subplot(1, 3, k)
-        # Create a range from 1 to 64 for the x-axis
-        x_axis_range_input = range(1, 65)
-        x_axis_range_target_pred = range(start_idx_target_pred, 65)
-        
-        # Plot the last 64 points of input
-        plt.plot(x_axis_range_input, input[start_idx_input:], label='input', linewidth=3)
-        
-        # Plot the 24 points of target and prediction at the end of the x-axis range
-        plt.plot(x_axis_range_target_pred, target, label='target', linewidth=3, linestyle='dashed')
-        plt.plot(x_axis_range_target_pred, preds, label='prediction', linewidth=3, linestyle='dotted')
-        
-        plt.xticks(range(1,65,5))
+        # Déterminer l'indice à partir duquel commencer la tracé de input
+        start_index = 130
+        input_range = range(start_index, len(input))
+        plt.plot(input_range, input[start_index:], label='input', linewidth=3)
+
+        # Préparer les plages pour 'target' et 'prediction'
+        target_pred_range = range(len(input), len(input) + len(target))
+
+        # Tracer 'target' et 'prediction'
+        plt.plot(target_pred_range, target, label='target', linewidth=3, linestyle='--')
+        plt.plot(target_pred_range, preds, label='prediction', linewidth=3, linestyle=':')
+
+        plt.xticks(range(start_index, len(input) + len(target), 10))
         plt.legend()
 
         k += 1
