@@ -79,7 +79,7 @@ testloader = DataLoader(traffic_test_dataset, batch_size=batch_size, shuffle=Fal
 ### FONCTION ENTRAINEMENT ET EVALUATION
 
 def train_model(net,loss_type, learning_rate, epochs=1000, gamma = 0.001,
-                print_every=50, alpha=0.5):
+                print_every=50, alpha=0.3):
     
     optimizer = torch.optim.Adam(net.parameters(),lr=learning_rate)
     ### learning rate adaptatif qui diminue au cours des epochs
