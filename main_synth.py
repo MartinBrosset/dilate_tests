@@ -47,7 +47,7 @@ def train_model(net,loss_type, learning_rate, epochs=1000, gamma = 0.001,
     
     for epoch in range(epochs): 
         for i, data in enumerate(trainloader, 0):
-            inputs, target = data
+            inputs, target, _ = data
             inputs = torch.tensor(inputs, dtype=torch.float32).to(device)
             target = torch.tensor(target, dtype=torch.float32).to(device)
 
