@@ -85,7 +85,7 @@ def eval_model(net,loader, gamma,verbose=1):
     for i, data in enumerate(loader, 0):
         loss_mse, loss_dtw, loss_tdi = torch.tensor(0),torch.tensor(0),torch.tensor(0)
         # get the inputs
-        inputs, target = data
+        inputs, target, _ = data
         inputs = torch.tensor(inputs, dtype=torch.float32).to(device)
         target = torch.tensor(target, dtype=torch.float32).to(device)
         batch_size, N_output = target.shape[0:2]
