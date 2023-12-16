@@ -1,12 +1,14 @@
 import numpy as np
 import torch
 from data.synthetic_dataset import create_synthetic_dataset, SyntheticDataset
-from models.seq2seq import EncoderRNN, DecoderRNN, Net_GRU
+from models.seq2seq import Seq2Seq
 from loss.dilate_loss import dilate_loss
-from torch.utils.data import DataLoader
+from sklearn.preprocessing import StandardScaler
+from torch.utils.data import DataLoader, Dataset
 import random
-import pandas as pd
+from copy import deepcopy
 import os
+import pandas as pd
 from tslearn.metrics import dtw, dtw_path
 import matplotlib.pyplot as plt
 import warnings
@@ -17,7 +19,7 @@ print(device)
 random.seed(0)
 
 # parameters
-batch_size = 100
+batch_size = 50
 N = 500
 N_input = 20
 N_output = 20  
@@ -32,26 +34,22 @@ trainloader = DataLoader(dataset_train, batch_size=batch_size,shuffle=True, num_
 testloader  = DataLoader(dataset_test, batch_size=batch_size,shuffle=False, num_workers=1)
 
 
+### FONCTION ENTRAINEMENT ET EVALUATION
+
 def train_model(net,loss_type, learning_rate, epochs=1000, gamma = 0.001,
-                print_every=50,eval_every=50, verbose=1, Lambda=1, alpha=0.5):
+                print_every=50, alpha=0.5):
     
     optimizer = torch.optim.Adam(net.parameters(),lr=learning_rate)
+    ### learning rate adaptatif qui diminue au cours des epochs
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.8)
+
     criterion = torch.nn.MSELoss()
-
-    train_losses = []
-    train_losses_shape = []
-    train_losses_temp = []
-
-    test_mse = []
-    test_dtw = []
-    test_tdi = []
     
     for epoch in range(epochs): 
         for i, data in enumerate(trainloader, 0):
-            inputs, target, _ = data
+            inputs, target = data
             inputs = torch.tensor(inputs, dtype=torch.float32).to(device)
             target = torch.tensor(target, dtype=torch.float32).to(device)
-            batch_size, N_output = target.shape[0:2]                     
 
             # forward + backward + optimize
             outputs = net(inputs)
@@ -59,30 +57,22 @@ def train_model(net,loss_type, learning_rate, epochs=1000, gamma = 0.001,
             
             if (loss_type=='mse'):
                 loss_mse = criterion(target,outputs)
-                loss = loss_mse
-                loss_dilate, loss_shape, loss_temporal = dilate_loss(target,outputs,alpha, gamma, device) 
-                train_losses.append(loss_dilate.item())
-                train_losses_shape.append(loss_shape.item())
-                train_losses_temp.append(loss_temporal.item())                   
+                loss = loss_mse                   
  
             if (loss_type=='dilate'):    
-                loss, loss_shape, loss_temporal = dilate_loss(target,outputs,alpha, gamma, device) 
-                train_losses.append(loss.item())
-                train_losses_shape.append(loss_shape.item())
-                train_losses_temp.append(loss_temporal.item())           
+                loss, loss_shape, loss_temporal = dilate_loss(target,outputs,alpha, gamma, device)             
                   
             optimizer.zero_grad()
             loss.backward()
-            optimizer.step()          
+            optimizer.step() 
+
+        ### on ajoute un pas au scheduler pour mettre le learning rate à jour
+        scheduler.step()
         
-        if(verbose):
-            if (epoch % print_every == 0):
-                print('epoch ', epoch, ' loss ',loss.item(),' loss shape ',loss_shape.item(),' loss temporal ',loss_temporal.item())
-                mse_, dtw_, tdi_ = eval_model(net,testloader, gamma,verbose=1)
-                test_mse.append(mse_)
-                test_dtw.append(dtw_)
-                test_tdi.append(tdi_)
-    return train_losses, train_losses_shape, train_losses_temp, test_mse, test_dtw, test_tdi
+        if (epoch % print_every == 0):
+            print('epoch ', epoch, ' loss ',loss.item(),' loss shape ',loss_shape.item(),' loss temporal ',loss_temporal.item())
+            m, d, t = eval_model(net,testloader, gamma,verbose=1)
+
   
 
 def eval_model(net,loader, gamma,verbose=1):   
@@ -94,7 +84,7 @@ def eval_model(net,loader, gamma,verbose=1):
     for i, data in enumerate(loader, 0):
         loss_mse, loss_dtw, loss_tdi = torch.tensor(0),torch.tensor(0),torch.tensor(0)
         # get the inputs
-        inputs, target, breakpoints = data
+        inputs, target = data
         inputs = torch.tensor(inputs, dtype=torch.float32).to(device)
         target = torch.tensor(target, dtype=torch.float32).to(device)
         batch_size, N_output = target.shape[0:2]
@@ -102,8 +92,9 @@ def eval_model(net,loader, gamma,verbose=1):
          
         # MSE    
         loss_mse = criterion(target,outputs)    
-        loss_dtw, loss_tdi = 0,0
+
         # DTW and TDI
+        loss_dtw, loss_tdi = 0,0
         for k in range(batch_size):         
             target_k_cpu = target[k,:,0:1].view(-1).detach().cpu().numpy()
             output_k_cpu = outputs[k,:,0:1].view(-1).detach().cpu().numpy()
@@ -125,47 +116,54 @@ def eval_model(net,loader, gamma,verbose=1):
         losses_tdi.append( loss_tdi )
 
     print( ' Eval mse= ', np.array(losses_mse).mean() ,' dtw= ',np.array(losses_dtw).mean() ,' tdi= ', np.array(losses_tdi).mean()) 
-    
     return(np.array(losses_mse).mean(), np.array(losses_dtw).mean(), np.array(losses_tdi).mean())
 
-encoder = EncoderRNN(input_size=1, hidden_size=128, num_grulstm_layers=1, batch_size=batch_size).to(device)
-decoder = DecoderRNN(input_size=1, hidden_size=128, num_grulstm_layers=1,fc_units=16, output_size=1).to(device)
-net_gru_dilate = Net_GRU(encoder,decoder, N_output, device).to(device)
-train_losses_dilate, train_losses_shape_dilate, train_losses_temp_dilate, test_mse_dilate, test_dtw_dilate, test_tdi_dilate = train_model(net_gru_dilate,loss_type='dilate',learning_rate=0.001, epochs=500, gamma=gamma, print_every=5, eval_every=5,verbose=1)
-final_mse, final_dtw, final_tdi = eval_model(net_gru_dilate, testloader, gamma, verbose=0)
+
+### CREATION DU MODELE GRU (Seq2Seq) ET ENTRAINEMENT
+net_gru_dilate = Seq2Seq(input_size=1, hidden_size=128, num_layers=1, fc_units=16, output_size=1, target_length=N_output, device=device).to(device)
+train_model(net_gru_dilate,loss_type='dilate',learning_rate=0.0005, epochs=300, gamma=gamma, alpha = 0.2, print_every=5)
+final_mse, final_dtw, final_tdi = eval_model(net_gru_dilate, testloader, gamma)
+
+net_gru_mse = Seq2Seq(input_size=1, hidden_size=128, num_layers=1, fc_units=16, output_size=1, target_length=N_output, device=device).to(device)
+train_model(net_gru_mse,loss_type='mse',learning_rate=0.0005, epochs=200, gamma=gamma, print_every=5)
+final_mse_2, final_dtw_2, final_tdi_2 = eval_model(net_gru_mse, testloader, gamma)
+
+net_gru_soft_dtw = Seq2Seq(input_size=1, hidden_size=128, num_layers=1, fc_units=16, output_size=1, target_length=N_output, device=device).to(device)
+train_model(net_gru_soft_dtw,loss_type='dilate',learning_rate=0.0005, epochs=300, gamma=gamma, alpha =1, print_every=5)
+final_mse_3, final_dtw_3, final_tdi_3 = eval_model(net_gru_soft_dtw, testloader, gamma)
 
 
-encoder = EncoderRNN(input_size=1, hidden_size=128, num_grulstm_layers=1, batch_size=batch_size).to(device)
-decoder = DecoderRNN(input_size=1, hidden_size=128, num_grulstm_layers=1,fc_units=16, output_size=1).to(device)
-net_gru_mse = Net_GRU(encoder,decoder, N_output, device).to(device)
-train_losses_mse, train_losses_shape_mse, train_losses_temp_mse, test_mse_mse, test_dtw_mse, test_tdi_mse = train_model(net_gru_mse,loss_type='mse',learning_rate=0.001, epochs=500, gamma=gamma, print_every=5, eval_every=5,verbose=1)
-final_mse_2, final_dtw_2, final_tdi_2 = eval_model(net_gru_mse, testloader, gamma, verbose=0)
-
-metrics_df = pd.DataFrame({
-    'Loss' : ['DILATE', 'MSE'],
-    'MSE': [final_mse, final_mse_2],
-    'DTW': [final_dtw, final_dtw_2],
-    'TDI': [final_tdi, final_tdi_2]
-})
-
-# Visualize results
+# VISUALISATION DES RESULTATS
 
 # Create a directory 'plots' if it doesn't exist
-if not os.path.exists('plots/ecg'):
-    os.makedirs('plots/ecg')
+if not os.path.exists('plots/synth'):
+    os.makedirs('plots/synth')
 
-metrics_df.to_csv('plots/tab_metrics_ecg.csv', index=False)
+### TABLEAU RECAPITULATIF DES METRICS
+
+metrics_df = pd.DataFrame({
+    'Loss' : ['DILATE', 'MSE', 'SOFT DTW'],
+    'MSE': [final_mse, final_mse_2, final_mse_3],
+    'DTW': [final_dtw, final_dtw_2, final_dtw_3],
+    'TDI': [final_tdi, final_tdi_2, final_tdi_3]
+})
+
+
+metrics_df.to_csv('plots/synth/tab_metrics_synth.csv', index=False)
+
+
+### PREDICTION DE QUELQUES SERIES SYNTH
 
 gen_test = iter(testloader)
-test_inputs, test_targets, breaks = next(gen_test)
+test_inputs, test_targets = next(gen_test)
 
 test_inputs  = torch.tensor(test_inputs, dtype=torch.float32).to(device)
 test_targets = torch.tensor(test_targets, dtype=torch.float32).to(device)
 criterion = torch.nn.MSELoss()
 
-nets = [net_gru_mse,net_gru_dilate]
+nets = [net_gru_mse,net_gru_dilate,net_gru_soft_dtw]
 
-for ind in range(1,51):
+for ind in range(1,20):
     plt.figure()
     plt.rcParams['figure.figsize'] = (17.0,5.0)  
     k = 1
@@ -177,73 +175,12 @@ for ind in range(1,51):
         preds = pred.detach().cpu().numpy()[ind,:,:]
 
         plt.subplot(1,3,k)
-        plt.plot(range(0,N_input) ,input,label='input',linewidth=3)
-        plt.plot(range(N_input-1,N_input+N_output), np.concatenate([ input[N_input-1:N_input], target ]) ,label='target',linewidth=3)   
-        plt.plot(range(N_input-1,N_input+N_output),  np.concatenate([ input[N_input-1:N_input], preds ])  ,label='prediction',linewidth=3)       
-        plt.xticks(range(0,40,2))
+        plt.plot(range(0, len(input)), input.flatten(), label='input', linewidth=3)
+        plt.plot(range(len(input)-1,len(input)+len(preds)), np.concatenate([ input[len(input)-1:len(input)].flatten(), target.flatten() ]) ,label='target',linewidth=3)   
+        plt.plot(range(len(input)-1,len(input)+len(preds)),  np.concatenate([ input[len(input)-1:len(input)].flatten(), preds.flatten() ])  ,label='prediction',linewidth=3)       
+        plt.xticks(range(0,140,10))
         plt.legend()
         k = k+1
 
-    plt.savefig(f'plots/ecg/plot_ecg_{ind}.png')  
+    plt.savefig(f'plots/synth/plot_synth_{ind}.png')  # Save figure
     plt.close()
-
-# Plots des évolution des loss au cours des epochs
-
-plt.figure(figsize=(12, 8))
-
-# Premier subplot
-plt.subplot(3, 1, 1)
-plt.plot(range(1, len(train_losses_dilate) + 1), train_losses_dilate, label='loss = dilate', color='blue')
-plt.plot(range(1, len(train_losses_dilate) + 1), train_losses_mse, label='loss = mse', color='red')
-plt.title('Evolution de L_dilate en fonction de la loss choisie pour le modèle')
-plt.legend()
-
-# Deuxième subplot
-plt.subplot(3, 1, 2)
-plt.plot(range(1, len(train_losses_shape_dilate) + 1), train_losses_shape_dilate, label='loss = dilate', color='blue')
-plt.plot(range(1, len(train_losses_shape_dilate) + 1), train_losses_shape_mse, label='loss = mse', color='red')
-plt.title('Evolution de L_shape en fonction de la loss choisie pour le modèle')
-plt.legend()
-
-# Troisième subplot
-plt.subplot(3, 1, 3)
-plt.plot(range(1, len(train_losses_temp_dilate) + 1), train_losses_temp_dilate, label='loss = dilate', color='blue')
-plt.plot(range(1, len(train_losses_temp_dilate) + 1), train_losses_temp_mse, label='loss = mse', color='red')
-plt.title('Evolution de L_temp en fonction de la loss choisie pour le modèle')
-plt.legend()
-
-plt.tight_layout()
-plt.savefig(f'plots/ecg/plots_losses.png')  
-plt.close()
-
-
-# Plots des évolution des metrics au cours des epochs
-
-plt.figure(figsize=(12, 8))
-
-test_mse_mse, test_dtw_mse, test_tdi_mse
-
-# Premier subplot
-plt.subplot(3, 1, 1)
-plt.plot(range(1, len(test_mse_dilate) + 1), test_mse_dilate, label='loss = dilate', color='blue')
-plt.plot(range(1, len(test_mse_mse) + 1), test_mse_mse, label='loss = mse', color='red')
-plt.title('Evolution de la MSE de test en fonction de la loss choisie pour le modèle')
-plt.legend()
-
-# Deuxième subplot
-plt.subplot(3, 1, 2)
-plt.plot(range(1, len(test_dtw_dilate) + 1), test_dtw_dilate, label='loss = dilate', color='blue')
-plt.plot(range(1, len(test_dtw_mse) + 1), test_dtw_mse, label='loss = mse', color='red')
-plt.title('Evolution de la DTW de test en fonction de la loss choisie pour le modèle')
-plt.legend()
-
-# Troisième subplot
-plt.subplot(3, 1, 3)
-plt.plot(range(1, len(test_tdi_dilate) + 1), test_tdi_dilate, label='loss = dilate', color='blue')
-plt.plot(range(1, len(test_tdi_mse) + 1), test_tdi_mse, label='loss = mse', color='red')
-plt.title('Evolution de la TDI de test en fonction de la loss choisie pour le modèle')
-plt.legend()
-
-plt.tight_layout()
-plt.savefig(f'plots/ecg/plots_metrics.png')  
-plt.close()
