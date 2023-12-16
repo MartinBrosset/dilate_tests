@@ -122,7 +122,7 @@ def eval_model(net,loader, gamma,verbose=1):
 
 ### CREATION DU MODELE GRU (Seq2Seq) ET ENTRAINEMENT
 net_gru_dilate = Seq2Seq(input_size=1, hidden_size=128, num_layers=1, fc_units=16, output_size=1, target_length=N_output, device=device).to(device)
-train_model(net_gru_dilate,loss_type='dilate',learning_rate=0.002, epochs=400, gamma=gamma, alpha = 0.65, print_every=5)
+train_model(net_gru_dilate,loss_type='dilate',learning_rate=0.002, epochs=400, gamma=gamma, alpha = 0.5, print_every=5)
 final_mse, final_dtw, final_tdi = eval_model(net_gru_dilate, testloader, gamma)
 
 net_gru_mse = Seq2Seq(input_size=1, hidden_size=128, num_layers=1, fc_units=16, output_size=1, target_length=N_output, device=device).to(device)
