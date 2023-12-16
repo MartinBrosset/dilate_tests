@@ -25,7 +25,7 @@ np.random.seed(seed)
 torch.manual_seed(seed)
 
 # parameters
-batch_size = 8
+batch_size = 7
 N = 70
 N_input = 168 ### une semaine
 N_output = 24 ### une journée   
@@ -41,12 +41,11 @@ traffic_test = np.array(pd.read_table(DATA_PATH + "Traffic/TRAFFIC_TEST.tsv"))[:
 
 traffic_train_flat = traffic_train.reshape(-1, traffic_train.shape[1])
 traffic_test_flat = traffic_test.reshape(-1, traffic_test.shape[1])
-"""
+
 # Normalisation
 scaler = StandardScaler()
 traffic_train_flat = scaler.fit_transform(traffic_train_flat)
 traffic_test_flat = scaler.transform(traffic_test_flat)
-"""
 
 traffic_train = traffic_train_flat.reshape(traffic_train.shape[0], traffic_train.shape[1], 1)
 traffic_test = traffic_test_flat.reshape(traffic_test.shape[0], traffic_test.shape[1], 1)
@@ -207,7 +206,7 @@ criterion = torch.nn.MSELoss()
 
 nets = [net_gru_mse,net_gru_dilate,net_gru_soft_dtw]
 
-for ind in range(1, 8):
+for ind in range(1, batch_size):
 
     plt.figure(figsize=(12, 4))
     plt.rcParams['figure.figsize'] = (17.0, 5.0)  
