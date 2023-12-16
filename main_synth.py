@@ -16,7 +16,7 @@ import warnings; warnings.simplefilter('ignore')
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
-random.seed(1)
+random.seed(2)
 
 # parameters
 batch_size = 50
