@@ -41,11 +41,12 @@ traffic_test = np.array(pd.read_table(DATA_PATH + "Traffic/TRAFFIC_TEST.tsv"))[:
 
 traffic_train_flat = traffic_train.reshape(-1, traffic_train.shape[1])
 traffic_test_flat = traffic_test.reshape(-1, traffic_test.shape[1])
-
+"""
 # Normalisation
 scaler = StandardScaler()
 traffic_train_flat = scaler.fit_transform(traffic_train_flat)
 traffic_test_flat = scaler.transform(traffic_test_flat)
+"""
 
 traffic_train = traffic_train_flat.reshape(traffic_train.shape[0], traffic_train.shape[1], 1)
 traffic_test = traffic_test_flat.reshape(traffic_test.shape[0], traffic_test.shape[1], 1)
@@ -228,8 +229,8 @@ for ind in range(1, 8):
         target_pred_range = range(len(input), len(input) + len(target))
 
         # Tracer 'target' et 'prediction'
-        plt.plot(target_pred_range, target, label='target', linewidth=3, linestyle='--')
-        plt.plot(target_pred_range, preds, label='prediction', linewidth=3, linestyle=':')
+        plt.plot(target_pred_range, target, label='target', linewidth=3)
+        plt.plot(target_pred_range, preds, label='prediction', linewidth=3)
 
         plt.xticks(range(start_index, len(input) + len(target), 10))
         plt.legend()
