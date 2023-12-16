@@ -19,7 +19,7 @@ print(device)
 
 ### SEED POUR LA REPRODUCTIBILITE 
 
-seed = 6
+seed = 7
 random.seed(seed)
 np.random.seed(seed)
 torch.manual_seed(seed)
