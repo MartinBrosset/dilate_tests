@@ -16,7 +16,7 @@ import warnings; warnings.simplefilter('ignore')
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
-random.seed(0)
+random.seed(42)
 
 # parameters
 batch_size = 50
@@ -156,7 +156,7 @@ metrics_df.to_csv('plots/synth/tab_metrics_synth.csv', index=False)
 ### PREDICTION DE QUELQUES SERIES SYNTH
 
 gen_test = iter(testloader)
-test_inputs, test_targets = next(gen_test)
+test_inputs, test_targets, _ = next(gen_test)
 
 test_inputs  = torch.tensor(test_inputs, dtype=torch.float32).to(device)
 test_targets = torch.tensor(test_targets, dtype=torch.float32).to(device)
