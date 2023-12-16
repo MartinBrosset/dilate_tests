@@ -34,10 +34,11 @@ trainloader = DataLoader(dataset_train, batch_size=batch_size,shuffle=True, num_
 testloader  = DataLoader(dataset_test, batch_size=batch_size,shuffle=False, num_workers=1)
 
 
+
 ### FONCTION ENTRAINEMENT ET EVALUATION
 
 def train_model(net,loss_type, learning_rate, epochs=1000, gamma = 0.001,
-                print_every=50, alpha=0.5):
+                print_every=50, alpha=0.3):
     
     optimizer = torch.optim.Adam(net.parameters(),lr=learning_rate)
     ### learning rate adaptatif qui diminue au cours des epochs
@@ -47,7 +48,7 @@ def train_model(net,loss_type, learning_rate, epochs=1000, gamma = 0.001,
     
     for epoch in range(epochs): 
         for i, data in enumerate(trainloader, 0):
-            inputs, target, _ = data
+            inputs, target = data
             inputs = torch.tensor(inputs, dtype=torch.float32).to(device)
             target = torch.tensor(target, dtype=torch.float32).to(device)
 
