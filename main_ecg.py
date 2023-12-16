@@ -19,7 +19,7 @@ print(device)
 
 ### SEED POUR LA REPRODUCTIBILITE 
 
-seed = 2
+seed = 0
 random.seed(seed)
 np.random.seed(seed)
 torch.manual_seed(seed)
@@ -164,7 +164,7 @@ def eval_model(net,loader, gamma,verbose=1):
 ### CREATION DU MODELE GRU (Seq2Seq) ET ENTRAINEMENT
 
 net_gru_dilate = Seq2Seq(input_size=1, hidden_size=128, num_layers=1, fc_units=16, output_size=1, target_length=N_output, device=device).to(device)
-train_model(net_gru_dilate,loss_type='dilate',learning_rate=0.005, epochs=500, gamma=gamma, print_every=5)
+train_model(net_gru_dilate,loss_type='dilate',learning_rate=0.005, epochs=500, gamma=gamma, alpha=0.7, print_every=5)
 final_mse, final_dtw, final_tdi = eval_model(net_gru_dilate, testloader, gamma)
 
 net_gru_mse = Seq2Seq(input_size=1, hidden_size=128, num_layers=1, fc_units=16, output_size=1, target_length=N_output, device=device).to(device)
@@ -179,8 +179,8 @@ final_mse_3, final_dtw_3, final_tdi_3 = eval_model(net_gru_soft_dtw, testloader,
 # VISUALISATION DES RESULTATS
 
 # Create a directory 'plots' if it doesn't exist
-if not os.path.exists('plots/synth'):
-    os.makedirs('plots/synth')
+if not os.path.exists('plots/ecg'):
+    os.makedirs('plots/ecg')
 
 ### TABLEAU RECAPITULATIF DES METRICS
 
@@ -192,7 +192,7 @@ metrics_df = pd.DataFrame({
 })
 
 
-metrics_df.to_csv('plots/synth/tab_metrics_synth.csv', index=False)
+metrics_df.to_csv('plots/ecg/tab_metrics_ecg.csv', index=False)
 
 
 ### PREDICTION DE QUELQUES ECG
@@ -225,5 +225,5 @@ for ind in range(1,20):
         plt.legend()
         k = k+1
 
-    plt.savefig(f'plots/synth/plot_synth_{ind}.png')  # Save figure
+    plt.savefig(f'plots/ecg/plot_ecg_{ind}.png')  # Save figure
     plt.close()
