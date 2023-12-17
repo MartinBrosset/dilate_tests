@@ -36,8 +36,8 @@ gamma = 0.01
 
 DATA_PATH = "./data/"
 
-insect_train = np.array(pd.read_table(DATA_PATH + "INSECT/INSECT_TRAIN.tsv"))[:, :, np.newaxis]
-insect_test = np.array(pd.read_table(DATA_PATH + "INSECT/INSECT_TEST.tsv"))[:, :, np.newaxis]
+insect_train = np.array(pd.read_table(DATA_PATH + "INSECT2/INSECT_TRAIN.tsv"))[:, :, np.newaxis]
+insect_test = np.array(pd.read_table(DATA_PATH + "INSECT2/INSECT_TEST.tsv"))[:, :, np.newaxis]
 
 insect_train_flat = insect_train.reshape(-1, insect_train.shape[1])
 insect_test_flat = insect_test.reshape(-1, insect_test.shape[1])
@@ -163,16 +163,16 @@ def eval_model(net,loader, gamma,verbose=1):
 
 ### CREATION DU MODELE GRU (Seq2Seq) ET ENTRAINEMENT
 
-net_gru_mse = Seq2Seq(input_size=1, hidden_size=128, num_layers=1, fc_units=16, output_size=1, target_length=N_output, device=device).to(device)
-train_model(net_gru_mse,loss_type='mse',learning_rate=0.02, epochs=200, gamma=gamma, print_every=5)
-final_mse_2, final_dtw_2, final_tdi_2 = eval_model(net_gru_mse, testloader, gamma)
-
 net_gru_dilate = Seq2Seq(input_size=1, hidden_size=128, num_layers=1, fc_units=16, output_size=1, target_length=N_output, device=device).to(device)
-train_model(net_gru_dilate,loss_type='dilate',learning_rate=0.005, epochs=500, gamma=gamma, alpha=0.5, print_every=5)
+train_model(net_gru_dilate,loss_type='dilate',learning_rate=0.001, epochs=400, gamma=gamma, alpha=0.5, print_every=5)
 final_mse, final_dtw, final_tdi = eval_model(net_gru_dilate, testloader, gamma)
 
+net_gru_mse = Seq2Seq(input_size=1, hidden_size=128, num_layers=1, fc_units=16, output_size=1, target_length=N_output, device=device).to(device)
+train_model(net_gru_mse,loss_type='mse',learning_rate=0.01, epochs=200, gamma=gamma, print_every=5)
+final_mse_2, final_dtw_2, final_tdi_2 = eval_model(net_gru_mse, testloader, gamma)
+
 net_gru_soft_dtw = Seq2Seq(input_size=1, hidden_size=128, num_layers=1, fc_units=16, output_size=1, target_length=N_output, device=device).to(device)
-train_model(net_gru_soft_dtw,loss_type='dilate',learning_rate=0.005, epochs=500, gamma=gamma, alpha =1, print_every=5)
+train_model(net_gru_soft_dtw,loss_type='dilate',learning_rate=0.001, epochs=400, gamma=gamma, alpha =1, print_every=5)
 final_mse_3, final_dtw_3, final_tdi_3 = eval_model(net_gru_soft_dtw, testloader, gamma)
 
 
@@ -218,12 +218,23 @@ for ind in range(1,20):
         preds = pred.detach().cpu().numpy()[ind,:,:]
 
         plt.subplot(1,3,k)
-        plt.plot(range(0, len(input)), input.flatten(), label='input', linewidth=3)
-        plt.plot(range(len(input)-1,len(input)+len(preds)), np.concatenate([ input[len(input)-1:len(input)].flatten(), target.flatten() ]) ,label='target',linewidth=3)   
-        plt.plot(range(len(input)-1,len(input)+len(preds)),  np.concatenate([ input[len(input)-1:len(input)].flatten(), preds.flatten() ])  ,label='prediction',linewidth=3)       
-        plt.xticks(range(0,300,30))
+
+        # Déterminer l'indice à partir duquel commencer la tracé de input
+        start_index = 130
+        input_range = range(start_index, len(input))
+        plt.plot(input_range, input[start_index:], label='input', linewidth=3)
+
+        # Préparer les plages pour 'target' et 'prediction'
+        target_pred_range = range(len(input), len(input) + len(target))
+
+        # Tracer 'target' et 'prediction'
+        plt.plot(target_pred_range, target, label='target', linewidth=3)
+        plt.plot(target_pred_range, preds, label='prediction', linewidth=3)
+
+        plt.xticks(range(start_index, len(input) + len(target), 10))
         plt.legend()
-        k = k+1
+
+        k += 1
 
     plt.savefig(f'plots/insect/plot_insect_{ind}.png')  # Save figure
     plt.close()
