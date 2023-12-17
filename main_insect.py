@@ -221,7 +221,7 @@ for ind in range(1,20):
         plt.plot(range(0, len(input)), input.flatten(), label='input', linewidth=3)
         plt.plot(range(len(input)-1,len(input)+len(preds)), np.concatenate([ input[len(input)-1:len(input)].flatten(), target.flatten() ]) ,label='target',linewidth=3)   
         plt.plot(range(len(input)-1,len(input)+len(preds)),  np.concatenate([ input[len(input)-1:len(input)].flatten(), preds.flatten() ])  ,label='prediction',linewidth=3)       
-        plt.xticks(range(0,140,10))
+        plt.xticks(range(0,300,30))
         plt.legend()
         k = k+1
 
