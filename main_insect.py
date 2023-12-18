@@ -19,7 +19,7 @@ print(device)
 
 ### SEED POUR LA REPRODUCTIBILITE 
 
-seed = 113
+seed = 11
 random.seed(seed)
 np.random.seed(seed)
 torch.manual_seed(seed)
@@ -27,8 +27,8 @@ torch.manual_seed(seed)
 # parameters
 batch_size = 35
 N = 500
-N_input = 200
-N_output = 100  
+N_input = 250
+N_output = 50  
 sigma = 0.01
 gamma = 0.01
 
@@ -60,7 +60,7 @@ print(insect_train.shape, insect_test.shape)
 
 class INSECTDataset(Dataset):
 
-    def __init__(self, data, output_length=100):
+    def __init__(self, data, output_length=50):
         self.data = torch.from_numpy(data).to(dtype=torch.float32)
         self.output_length = output_length
 
@@ -83,7 +83,7 @@ def train_model(net,loss_type, learning_rate, epochs=1000, gamma = 0.001,
     
     optimizer = torch.optim.Adam(net.parameters(),lr=learning_rate)
     ### learning rate adaptatif qui diminue au cours des epochs
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=15, gamma=0.8)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.8)
 
     criterion = torch.nn.MSELoss()
     
