@@ -36,8 +36,8 @@ gamma = 0.01
 
 DATA_PATH = "./data/"
 
-insect_train = np.array(pd.read_table(DATA_PATH + "INSECT2/INSECT_TRAIN.tsv"))[:, :, np.newaxis]
-insect_test = np.array(pd.read_table(DATA_PATH + "INSECT2/INSECT_TEST.tsv"))[:, :, np.newaxis]
+insect_train = np.array(pd.read_table(DATA_PATH + "INSECT3/INSECT_TRAIN.tsv"))[:, :, np.newaxis]
+insect_test = np.array(pd.read_table(DATA_PATH + "INSECT3/INSECT_TEST.tsv"))[:, :, np.newaxis]
 
 insect_train_flat = insect_train.reshape(-1, insect_train.shape[1])
 insect_test_flat = insect_test.reshape(-1, insect_test.shape[1])
