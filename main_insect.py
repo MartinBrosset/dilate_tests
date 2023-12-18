@@ -19,7 +19,7 @@ print(device)
 
 ### SEED POUR LA REPRODUCTIBILITE 
 
-seed = 15
+seed = 16
 random.seed(seed)
 np.random.seed(seed)
 torch.manual_seed(seed)
@@ -206,7 +206,7 @@ criterion = torch.nn.MSELoss()
 
 nets = [net_gru_mse,net_gru_dilate,net_gru_soft_dtw]
 
-for ind in range(1,20):
+for ind in range(1,30):
     plt.figure()
     plt.rcParams['figure.figsize'] = (17.0,5.0)  
     k = 1
@@ -231,7 +231,7 @@ for ind in range(1,20):
         plt.plot(target_pred_range, target, label='target', linewidth=3)
         plt.plot(target_pred_range, preds, label='prediction', linewidth=3)
 
-        plt.xticks(range(start_index, len(input) + len(target), 10))
+        plt.xticks(range(start_index, len(input) + len(target), 30))
         plt.legend()
 
         k += 1
