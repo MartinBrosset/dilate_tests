@@ -164,7 +164,7 @@ def eval_model(net,loader, gamma,verbose=1):
 ### CREATION DU MODELE GRU (Seq2Seq) ET ENTRAINEMENT
 
 net_gru_dilate = Seq2Seq(input_size=1, hidden_size=128, num_layers=1, fc_units=16, output_size=1, target_length=N_output, device=device).to(device)
-train_model(net_gru_dilate,loss_type='dilate',learning_rate=0.0001, epochs=300, gamma=gamma, alpha=0.7, print_every=5)
+train_model(net_gru_dilate,loss_type='dilate',learning_rate=0.001, epochs=300, gamma=gamma, alpha=0.7, print_every=5)
 final_mse, final_dtw, final_tdi = eval_model(net_gru_dilate, testloader, gamma)
 
 net_gru_mse = Seq2Seq(input_size=1, hidden_size=128, num_layers=1, fc_units=16, output_size=1, target_length=N_output, device=device).to(device)
@@ -172,7 +172,7 @@ train_model(net_gru_mse,loss_type='mse',learning_rate=0.001, epochs=100, gamma=g
 final_mse_2, final_dtw_2, final_tdi_2 = eval_model(net_gru_mse, testloader, gamma)
 
 net_gru_soft_dtw = Seq2Seq(input_size=1, hidden_size=128, num_layers=1, fc_units=16, output_size=1, target_length=N_output, device=device).to(device)
-train_model(net_gru_soft_dtw,loss_type='dilate',learning_rate=0.0001, epochs=200, gamma=gamma, alpha =1, print_every=5)
+train_model(net_gru_soft_dtw,loss_type='dilate',learning_rate=0.001, epochs=200, gamma=gamma, alpha =1, print_every=5)
 final_mse_3, final_dtw_3, final_tdi_3 = eval_model(net_gru_soft_dtw, testloader, gamma)
 
 
